@@ -39,10 +39,9 @@ function go(e) {
   const q = document.getElementById('q').value.trim();
   if (!q) return;
 
-  // Use DuckDuckGo HTML endpoint for better proxy compatibility
   const target = q.includes('.')
     ? 'https://' + q
-    : 'https://html.duckduckgo.com/html/?q=' + encodeURIComponent(q);
+    : 'https://search.brave.com/search?q=' + encodeURIComponent(q);
 
   location.href = '/p?u=' + encodeURIComponent(target);
 }
@@ -62,13 +61,12 @@ function go(e) {
 
     let targetUrl;
     try {
-      // NOTE: searchParams.get already returns a decoded string
       targetUrl = new URL(encoded);
     } catch {
       return new Response("Invalid URL", { status: 400 });
     }
 
-    // More browser-like headers to reduce DDG errors
+    // More browser-like headers
     const res = await fetch(targetUrl.toString(), {
       headers: {
         "User-Agent":
@@ -97,15 +95,6 @@ function go(e) {
         if (!link || link.startsWith("javascript:") || link.startsWith("#"))
           return link;
 
-        // Handle DuckDuckGo redirect links: /l/?uddg=<url>
-        if (link.startsWith("/l/?uddg=")) {
-          const real = decodeURIComponent(
-            new URL("https://duckduckgo.com" + link)
-              .searchParams.get("uddg")
-          );
-          return "/p?u=" + encodeURIComponent(real);
-        }
-
         const abs = new URL(link, base).href;
         return "/p?u=" + encodeURIComponent(abs);
       } catch {
@@ -125,7 +114,6 @@ document.addEventListener('click', e => {
   const a = e.target.closest('a');
   if (!a || !a.href) return;
 
-  // already proxified
   if (a.href.includes('/p?u=')) return;
 
   e.preventDefault();
