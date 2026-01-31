@@ -1,7 +1,15 @@
 {
   "routes": [
     {
-      "src": "/favicon\\.png",
+      "src": "/p",
+      "dest": "/api/proxy.js"
+    },
+    {
+      "src": "/p/(.*)",
+      "dest": "/api/proxy.js"
+    },
+    {
+      "src": "/favicon.png",
       "dest": "/favicon.png"
     },
     {
