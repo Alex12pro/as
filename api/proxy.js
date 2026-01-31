@@ -39,9 +39,10 @@ function go(e) {
   const q = document.getElementById('q').value.trim();
   if (!q) return;
 
+  // Use DuckDuckGo HTML endpoint for better proxy compatibility
   const target = q.includes('.')
     ? 'https://' + q
-    : 'https://duckduckgo.com/?q=' + encodeURIComponent(q);
+    : 'https://html.duckduckgo.com/html/?q=' + encodeURIComponent(q);
 
   location.href = '/p?u=' + encodeURIComponent(target);
 }
@@ -61,14 +62,13 @@ function go(e) {
 
     let targetUrl;
     try {
+      // NOTE: searchParams.get already returns a decoded string
       targetUrl = new URL(encoded);
     } catch {
       return new Response("Invalid URL", { status: 400 });
     }
 
-    // ============================
-    // ✔ FIXED: FULL BROWSER HEADERS
-    // ============================
+    // More browser-like headers to reduce DDG errors
     const res = await fetch(targetUrl.toString(), {
       headers: {
         "User-Agent":
@@ -77,11 +77,7 @@ function go(e) {
         "Accept":
           "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
         "Accept-Language": "en-US,en;q=0.9",
-        "Accept-Encoding": "gzip, deflate, br",
-        "Upgrade-Insecure-Requests": "1",
-        "Sec-Fetch-Dest": "document",
-        "Sec-Fetch-Mode": "navigate",
-        "Sec-Fetch-Site": "none",
+        "Upgrade-Insecure-Requests": "1"
       }
     });
 
@@ -101,6 +97,7 @@ function go(e) {
         if (!link || link.startsWith("javascript:") || link.startsWith("#"))
           return link;
 
+        // Handle DuckDuckGo redirect links: /l/?uddg=<url>
         if (link.startsWith("/l/?uddg=")) {
           const real = decodeURIComponent(
             new URL("https://duckduckgo.com" + link)
@@ -128,6 +125,7 @@ document.addEventListener('click', e => {
   const a = e.target.closest('a');
   if (!a || !a.href) return;
 
+  // already proxified
   if (a.href.includes('/p?u=')) return;
 
   e.preventDefault();
