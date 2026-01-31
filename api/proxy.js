@@ -6,7 +6,7 @@ export default async function handler(request) {
   const url = new URL(request.url);
 
   // =====================
-  // HOME / SEARCH PAGE
+  // HOME PAGE
   // =====================
   if (url.pathname === "/") {
     return new Response(
@@ -17,28 +17,11 @@ export default async function handler(request) {
 <title>Private Search</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
-body {
-  margin: 0;
-  font-family: system-ui, sans-serif;
-  background: #fff;
-}
-main {
-  margin-top: 120px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-h1 {
-  font-size: 42px;
-  margin-bottom: 36px;
-}
+body { margin:0; font-family:system-ui,sans-serif; background:#fff; }
+main { margin-top:120px; text-align:center; }
 input {
-  width: 560px;
-  max-width: 90%;
-  padding: 14px 22px;
-  font-size: 16px;
-  border-radius: 999px;
-  border: 1px solid #ddd;
+  width:560px; max-width:90%; padding:14px 22px;
+  font-size:16px; border-radius:999px; border:1px solid #ddd;
 }
 </style>
 </head>
@@ -49,6 +32,7 @@ input {
     <input id="q" placeholder="Search or enter address" autofocus>
   </form>
 </main>
+
 <script>
 function go(e) {
   e.preventDefault();
@@ -69,7 +53,7 @@ function go(e) {
   }
 
   // =====================
-  // PROXY MODE (/p)
+  // PROXY MODE — /p
   // =====================
   if (url.pathname === "/p") {
     const encoded = url.searchParams.get("u");
@@ -89,9 +73,8 @@ function go(e) {
       }
     });
 
-    const contentType = res.headers.get("content-type") || "";
-
-    if (!contentType.includes("text/html")) {
+    const type = res.headers.get("content-type") || "";
+    if (!type.includes("text/html")) {
       return new Response(res.body, {
         status: res.status,
         headers: res.headers
@@ -101,17 +84,17 @@ function go(e) {
     let html = await res.text();
     const base = targetUrl.origin;
 
-    const proxify = link => {
+    const proxify = (link) => {
       try {
-        if (!link || link.startsWith("javascript:") || link.startsWith("#")) return link;
+        if (!link || link.startsWith("javascript:") || link.startsWith("#"))
+          return link;
 
-        // Handle DuckDuckGo redirect
         if (link.startsWith("/l/?uddg=")) {
-          const dest = decodeURIComponent(
+          const real = decodeURIComponent(
             new URL("https://duckduckgo.com" + link)
               .searchParams.get("uddg")
           );
-          return "/p?u=" + encodeURIComponent(dest);
+          return "/p?u=" + encodeURIComponent(real);
         }
 
         const abs = new URL(link, base).href;
