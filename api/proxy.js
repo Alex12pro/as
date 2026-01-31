@@ -6,7 +6,7 @@ export default async function handler(request) {
   const url = new URL(request.url);
 
   // =====================
-  // HOME PAGE (Brave Search)
+  // HOME PAGE
   // =====================
   if (url.pathname === "/") {
     return new Response(
@@ -66,7 +66,7 @@ function go(e) {
   try { targetUrl = new URL(encoded); }
   catch { return new Response("Invalid URL", { status: 400 }); }
 
-  // Browser-like headers (safe)
+  // Browser-like headers
   const hdr = new Headers();
   hdr.set("User-Agent", request.headers.get("User-Agent") ||
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122 Safari/537.36");
@@ -74,7 +74,6 @@ function go(e) {
   hdr.set("Accept-Language", "en-US,en;q=0.9");
   hdr.set("Upgrade-Insecure-Requests", "1");
 
-  // Fetch upstream
   const upstream = await fetch(targetUrl.toString(), {
     headers: hdr,
     redirect: "manual"
@@ -97,17 +96,11 @@ function go(e) {
   if (type.includes("text/css")) {
     let css = await upstream.text();
 
-    // url(...)
-    css = css.replace(/url\(\s*(['"]?)([^'")]+)\1\s*\)/gi, (m,q,u) => {
-      const abs = new URL(u, targetUrl).href;
-      return `url("/p?u=${encodeURIComponent(abs)}")`;
-    });
+    css = css.replace(/url\(\s*(['"]?)([^'")]+)\1\s*\)/gi,
+      (m,q,u) => `url("/p?u=${encodeURIComponent(new URL(u, targetUrl).href)}")`);
 
-    // @import
-    css = css.replace(/@import\s+(['"])(.*?)\1/gi, (m,q,u) => {
-      const abs = new URL(u, targetUrl).href;
-      return `@import "/p?u=${encodeURIComponent(abs)}"`;
-    });
+    css = css.replace(/@import\s+(['"])(.*?)\1/gi,
+      (m,q,u) => `@import "/p?u=${encodeURIComponent(new URL(u, targetUrl).href)}"`);
 
     return new Response(css, {
       status: upstream.status,
@@ -131,7 +124,6 @@ function go(e) {
   let html = await upstream.text();
   const base = targetUrl.href;
 
-  // Helper for URLs
   const proxify = (raw) => {
     if (!raw) return raw;
     const link = raw.trim();
@@ -149,7 +141,6 @@ function go(e) {
     } catch { return raw; }
   };
 
-  // srcset
   const rewriteSrcset = (value) =>
     value.split(",").map(part => {
       const tr = part.trim();
@@ -158,7 +149,6 @@ function go(e) {
       return [proxify(u), ...rest].join(" ");
     }).join(", ");
 
-  // Inline CSS
   const rewriteCssInline = (css) =>
     css
       .replace(/url\(\s*(['"]?)([^'")]+)\1\s*\)/gi,
@@ -166,14 +156,13 @@ function go(e) {
       .replace(/@import\s+(['"])(.*?)\1/gi,
         (m,q,u) => `@import "${proxify(u)}"`);
 
-  // Attributes
+  // Rewrite standard attributes
   html = html.replace(
     /\b(href|src|action|poster|data-src|data-href)=("([^"]*)"|'([^']*)')/gi,
     (m,attr,quoted,dbl,sgl) => {
       const v = dbl ?? sgl ?? "";
-      const nv = proxify(v);
       const q = quoted[0];
-      return `${attr}=${q}${nv}${q}`;
+      return `${attr}=${q}${proxify(v)}${q}`;
     }
   );
 
@@ -187,17 +176,17 @@ function go(e) {
     }
   );
 
-  // style=""
+  // inline style
   html = html.replace(
     /\bstyle=("([^"]*)"|'([^']*)')/gi,
     (m,quoted,dbl,sgl) => {
-      const v = dbl ?? sgl ?? "";
       const q = quoted[0];
+      const v = dbl ?? sgl ?? "";
       return `style=${q}${rewriteCssInline(v)}${q}`;
     }
   );
 
-  // <style>
+  // <style> blocks
   html = html.replace(
     /<style[^>]*>([\s\S]*?)<\/style>/gi,
     (m,css) => m.replace(css, rewriteCssInline(css))
@@ -228,18 +217,17 @@ function go(e) {
       let d = doc
         .replace(/href="([^"]+)"/gi, (m,l) => `href="${proxify(l)}"`)
         .replace(/src="([^"]+)"/gi, (m,l) => `src="${proxify(l)}"`);
-      d = d.replace(/"/g, "&quot;");
-      return `srcdoc="${d}"`;
+      return `srcdoc="${d.replace(/"/g,"&quot;")}"`;
     }
   );
 
   // =====================
-  // Inject click + fetch/XHR wrappers
+  // SCRIPT INJECTION (click + form + fetch + XHR)
   // =====================
   html = html.replace(
     "</body>",
 `<script>
-// CLICK INTERCEPT (keeps navigation inside /p?u=)
+// CLICK INTERCEPT
 document.addEventListener('click', e => {
   const a = e.target.closest && e.target.closest('a');
   if (!a || !a.href) return;
@@ -248,18 +236,29 @@ document.addEventListener('click', e => {
   location.href = '/p?u=' + encodeURIComponent(a.href);
 }, true);
 
+// FORM INTERCEPT (Brave Search fix)
+document.addEventListener("submit", function (e) {
+  const form = e.target;
+  const action = form.getAttribute("action") || "";
+  let abs;
+  try { abs = new URL(action, window.location.href).href; }
+  catch { return; }
+  e.preventDefault();
+  const fd = new FormData(form);
+  const params = new URLSearchParams(fd).toString();
+  const final = abs + (abs.includes("?") ? "&" : "?") + params;
+  window.location.href = "/p?u=" + encodeURIComponent(final);
+}, true);
+
 // FETCH WRAPPER (educational)
 (function(){
   const oldFetch = window.fetch;
   window.fetch = function(u,opts){
     try {
-      if (typeof u === "string") {
-        const abs = new URL(u, window.location.href).href;
-        return oldFetch('/p?u=' + encodeURIComponent(abs), opts);
-      }
-      if (u instanceof URL) {
-        return oldFetch('/p?u=' + encodeURIComponent(u.href), opts);
-      }
+      const abs = (u instanceof URL)
+        ? u.href
+        : new URL(u, window.location.href).href;
+      return oldFetch('/p?u=' + encodeURIComponent(abs), opts);
     } catch(e){}
     return oldFetch(u,opts);
   };
@@ -271,7 +270,7 @@ document.addEventListener('click', e => {
   XMLHttpRequest.prototype.open = function(m,u){
     try {
       const abs = new URL(u, window.location.href).href;
-      return oldOpen.apply(this,[m, '/p?u=' + encodeURIComponent(abs)]);
+      return oldOpen.apply(this,[m,'/p?u=' + encodeURIComponent(abs)]);
     } catch(e){}
     return oldOpen.apply(this,[m,u]);
   };
