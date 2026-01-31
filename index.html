@@ -1,115 +1,88 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<title>Nebula 2.0</title>
-<meta name="viewport" content="width=device-width, initial-scale=1">
-
-<style>
-
-/* ============================================================
-   ROOT VARIABLES
-   ============================================================ */
-:root {
-  --accent-blue: #4dd0ff;
-  --accent-purple: #b36bff;
-  --accent-pink: #ff4dc4;
-
-  --text-primary: #ffffff;
-  --text-secondary: #c7d2e5;
-
-  --card-bg: rgba(255,255,255,0.06);
-  --card-border: rgba(255,255,255,0.18);
-}
-
-/* Reset */
-html, body {
-  margin: 0;
-  padding: 0;
-  font-family: Inter, sans-serif;
-  height: 100%;
-  overflow: hidden;
-  background: #080c14;
-}
-
-/* ============================================================
-   MAIN BACKGROUND — animated variants
-   ============================================================ */
-
+/* ===========================================
+   UNIVERSAL BACKGROUND CONTAINER
+   =========================================== */
 body::before {
   content: "";
   position: fixed;
   top: 0; left: 0;
-  width: 100vw;
-  height: 100vh;
+  width: 100%;
+  height: 100%;
   background-size: cover;
+  background-repeat: no-repeat;
   background-position: center;
   z-index: -1;
   opacity: 1;
   transition: opacity 0.5s ease, filter 0.5s ease;
 }
 
-/* ---------- Cinematic fade (Option B: dark top, bright bottom) ---------- */
-body[data-bg]::before {
-  mask-image: linear-gradient(to bottom, rgba(0,0,0,0.9), rgba(255,255,255,1));
-  -webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,0.9), rgba(255,255,255,1));
-}
-
-/* ---------- 1. Nebula background ---------- */
+/* ===========================================
+   1 — NEBULA (Animated fog + colors)
+   =========================================== */
 @keyframes nebulaMove {
-  0% { transform: translate3d(-10%, -10%, 0) scale(1.25); }
-  50% { transform: translate3d(10%, 10%, 0) scale(1.28); }
-  100% { transform: translate3d(-10%, -10%, 0) scale(1.25); }
+  0% { transform: translate3d(-10%, -10%, 0) scale(1.2); }
+  50% { transform: translate3d(10%, 10%, 0) scale(1.25); }
+  100% { transform: translate3d(-10%, -10%, 0) scale(1.2); }
 }
 body[data-bg="nebula"]::before {
   background:
-    radial-gradient(circle at 20% 30%, rgba(0,140,255,0.45), transparent 65%),
-    radial-gradient(circle at 80% 70%, rgba(255,30,200,0.35), transparent 80%),
-    radial-gradient(circle at 50% 60%, rgba(60,0,120,0.5), transparent 95%);
-  filter: blur(42px);
+    radial-gradient(circle at 20% 30%, rgba(0,140,255,0.45), transparent 60%),
+    radial-gradient(circle at 80% 70%, rgba(255,30,200,0.35), transparent 70%),
+    radial-gradient(circle at 50% 50%, rgba(60,0,120,0.5), transparent 80%);
+  filter: blur(40px);
   animation: nebulaMove 20s infinite alternate ease-in-out;
 }
 
-/* ---------- 2. Galaxy ---------- */
+/* ===========================================
+   2 — GALAXY (Rotating star swirl)
+   =========================================== */
 @keyframes galaxyRotate {
   0% { transform: rotate(0deg) scale(1.1); }
   100% { transform: rotate(360deg) scale(1.1); }
 }
 body[data-bg="galaxy"]::before {
-  background: repeating-radial-gradient(circle,
-      rgba(255,255,255,0.05) 0px,
-      rgba(255,255,255,0.02) 2px,
-      transparent 3px);
+  background:
+    repeating-radial-gradient(circle,
+      rgba(255,255,255,0.06) 0px,
+      rgba(255,255,255,0.03) 2px,
+      transparent 3px
+    );
   animation: galaxyRotate 40s linear infinite;
 }
 
-/* ---------- 3. Pulse ---------- */
+/* ===========================================
+   3 — PULSE (Color-shifting glow pulses)
+   =========================================== */
 @keyframes pulseGlow {
   0% { filter: hue-rotate(0deg) brightness(1); }
-  50% { filter: hue-rotate(100deg) brightness(1.25); }
+  50% { filter: hue-rotate(80deg) brightness(1.25); }
   100% { filter: hue-rotate(0deg) brightness(1); }
 }
 body[data-bg="pulse"]::before {
   background:
     radial-gradient(circle at 50% 50%, rgba(0,200,255,0.5), transparent 70%),
     radial-gradient(circle at 80% 20%, rgba(255,0,150,0.5), transparent 80%),
-    radial-gradient(circle at 10% 80%, rgba(150,0,255,0.45), transparent 80%);
+    radial-gradient(circle at 10% 80%, rgba(150,0,255,0.4), transparent 80%);
   filter: blur(30px);
-  animation: pulseGlow 9s ease-in-out infinite;
+  animation: pulseGlow 8s ease-in-out infinite;
 }
 
-/* ---------- 4. Night ---------- */
+/* ===========================================
+   4 — NIGHT (Soft floating shadows)
+   =========================================== */
 @keyframes nightFloat {
   0% { transform: translateY(0px); }
-  50% { transform: translateY(-20px); }
+  50% { transform: translateY(-25px); }
   100% { transform: translateY(0px); }
 }
 body[data-bg="night"]::before {
-  background: linear-gradient(145deg,#080c14,#02050b);
+  background:
+    linear-gradient(145deg, #0a0f1a, #02050b);
   animation: nightFloat 16s ease-in-out infinite;
 }
 
-/* ---------- 5. Grid Glow ---------- */
+/* ===========================================
+   5 — GRID GLOW (Cyber glowing animated grid)
+   =========================================== */
 @keyframes gridMove {
   0% { background-position: 0 0; }
   100% { background-position: 200px 200px; }
@@ -117,247 +90,64 @@ body[data-bg="night"]::before {
 body[data-bg="grid"]::before {
   background:
     linear-gradient(rgba(0,0,0,0.75), rgba(0,0,0,0.75)),
-    repeating-linear-gradient(0deg,
+    repeating-linear-gradient(
+      0deg,
       rgba(0,200,255,0.15) 0px,
       rgba(0,200,255,0.05) 2px,
-      transparent 3px),
-    repeating-linear-gradient(90deg,
+      transparent 3px
+    ),
+    repeating-linear-gradient(
+      90deg,
       rgba(0,200,255,0.15) 0px,
       rgba(0,200,255,0.05) 2px,
-      transparent 3px);
+      transparent 3px
+    );
   animation: gridMove 15s linear infinite;
 }
 
-/* ---------- 6. Stars ---------- */
+/* ===========================================
+   6 — STARS (Procedural animated starfield)
+   =========================================== */
 @keyframes twinkle {
-  0%,100% { opacity: .85; }
+  0%, 100% { opacity: 0.8; }
   50% { opacity: 1; }
 }
 body[data-bg="stars"]::before {
   background:
+    radial-gradient(circle, rgba(255,255,255,0.1) 1px, transparent 1px),
     radial-gradient(circle, rgba(255,255,255,0.08) 1px, transparent 1px),
-    radial-gradient(circle, rgba(255,255,255,0.06) 1px, transparent 1px),
-    radial-gradient(circle, rgba(255,255,255,0.04) 1px, transparent 1px);
+    radial-gradient(circle, rgba(255,255,255,0.05) 1px, transparent 1px);
   background-size: 3px 3px, 2px 2px, 1px 1px;
-  animation: twinkle 5s infinite ease-in-out;
+  animation: twinkle 5s infinite ease-in-out alternate;
 }
 
-/* ---------- 7. Waves ---------- */
+/* ===========================================
+   7 — WAVES (Liquid animated gradient waves)
+   =========================================== */
 @keyframes waveMove {
   0% { background-position: 0% 50%; }
-  100% { background-position: 180% 50%; }
+  100% { background-position: 200% 50%; }
 }
 body[data-bg="waves"]::before {
-  background: linear-gradient(120deg,#003f7d,#0050ff,#7b00ff,#ff00cc);
+  background: linear-gradient(120deg,
+    #003f7d,
+    #0044ff,
+    #7b00ff,
+    #ff00cc
+  );
   background-size: 300% 300%;
-  animation: waveMove 12s linear infinite;
+  animation: waveMove 12s infinite linear;
 }
 
-/* ---------- 8. Solid ---------- */
+/* ===========================================
+   8 — SOLID (Shimmering ambient gradient)
+   =========================================== */
 @keyframes shimmer {
   0% { filter: brightness(1); }
-  50% { filter: brightness(1.12); }
+  50% { filter: brightness(1.15); }
   100% { filter: brightness(1); }
 }
 body[data-bg="solid"]::before {
-  background: linear-gradient(140deg,#0e1220,#181c2d);
+  background: linear-gradient(140deg, #0e1220, #1b1f34);
   animation: shimmer 10s infinite ease-in-out;
 }
-
-/* ============================================================
-   NEBULA LOGO + HERO CONTENT
-   ============================================================ */
-#logo {
-  text-align: center;
-  font-size: 4rem;
-  font-weight: 900;
-  margin-top: 80px;
-  background: linear-gradient(90deg,#4dd0ff,#b36bff);
-  -webkit-background-clip: text;
-  color: transparent;
-  letter-spacing: 2px;
-}
-
-.hero-tagline {
-  text-align: center;
-  color: #dce7ff;
-  font-size: 1.4rem;
-  margin-top: -10px;
-}
-
-/* SEARCH BUTTON CARD */
-.quick-card {
-  width: 260px;
-  margin: 40px auto;
-  padding: 22px;
-  background: var(--card-bg);
-  backdrop-filter: blur(25px);
-  border-radius: 18px;
-  border: 1px solid var(--card-border);
-  text-align: center;
-  cursor: pointer;
-  transition: 0.3s;
-}
-.quick-card:hover {
-  transform: scale(1.04);
-  border-color: #4dd0ff;
-}
-.quick-card h3,
-.quick-card p {
-  color: #fff !important;
-  margin: 0;
-  margin-top: 6px;
-  font-weight: 500;
-}
-
-/* ============================================================
-   SETTINGS PANEL
-   ============================================================ */
-#settingsBtn {
-  position: fixed;
-  top: 22px;
-  right: 22px;
-  background: rgba(255,255,255,0.12);
-  border: 1px solid rgba(255,255,255,0.25);
-  width: 42px;
-  height: 42px;
-  border-radius: 12px;
-  cursor: pointer;
-  backdrop-filter: blur(12px);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-#settingsPanel {
-  position: fixed;
-  right: -420px;
-  top: 0;
-  width: 420px;
-  height: 100%;
-  background: rgba(10,12,20,0.88);
-  backdrop-filter: blur(20px);
-  border-left: 1px solid rgba(255,255,255,0.15);
-  transition: 0.4s;
-  padding: 40px;
-  color: #fff;
-  overflow-y: auto;
-}
-#settingsPanel.active {
-  right: 0;
-}
-
-.settings-title {
-  font-size: 1.6rem;
-  margin-bottom: 20px;
-}
-
-.settings-subtitle {
-  margin-top: 28px;
-  font-size: 1.1rem;
-  margin-bottom: 14px;
-  color: #e8efff !important;
-}
-
-/* setting buttons */
-.settings-btn {
-  width: 48%;
-  padding: 14px;
-  margin: 6px 1%;
-  border-radius: 14px;
-  background: rgba(255,255,255,0.08);
-  border: 1px solid rgba(255,255,255,0.18);
-  text-align: center;
-  cursor: pointer;
-  color: #e8efff !important;
-  transition: 0.3s;
-}
-.settings-btn:hover {
-  background: rgba(255,255,255,0.14);
-  border-color: var(--accent-blue);
-  color: #fff !important;
-}
-
-</style>
-</head>
-
-<body data-bg="nebula">
-
-<!-- SETTINGS BUTTON -->
-<div id="settingsBtn">⚙️</div>
-
-<!-- SETTINGS PANEL -->
-<div id="settingsPanel">
-  <div class="settings-title">Settings</div>
-
-  <div class="settings-subtitle">Background Style</div>
-
-  <div class="settings-btn" data-bg="nebula">Nebula</div>
-  <div class="settings-btn" data-bg="galaxy">Galaxy</div>
-  <div class="settings-btn" data-bg="pulse">Pulse</div>
-  <div class="settings-btn" data-bg="night">Night</div>
-  <div class="settings-btn" data-bg="grid">Grid Glow</div>
-  <div class="settings-btn" data-bg="stars">Stars</div>
-  <div class="settings-btn" data-bg="waves">Waves</div>
-  <div class="settings-btn" data-bg="solid">Solid</div>
-</div>
-
-<!-- MAIN LOGO + SEARCH -->
-<div id="logo">NEBULA</div>
-<div class="hero-tagline">Created By Alex</div>
-
-<div class="quick-card" onclick="openSearch()">
-  <h3>🔍 Search</h3>
-  <p>Start browsing</p>
-</div>
-
-<script>
-
-/* ============================================================
-   SETTINGS PANEL TOGGLE
-   ============================================================ */
-const settingsBtn = document.getElementById("settingsBtn");
-const settingsPanel = document.getElementById("settingsPanel");
-
-settingsBtn.onclick = () => {
-  settingsPanel.classList.toggle("active");
-};
-
-/* ============================================================
-   APPLY SAVED THEME
-   ============================================================ */
-const savedBG = localStorage.getItem("nebula-bg");
-if (savedBG) document.body.setAttribute("data-bg", savedBG);
-
-/* ============================================================
-   BACKGROUND BUTTONS
-   ============================================================ */
-document.querySelectorAll(".settings-btn").forEach(btn => {
-  btn.addEventListener("click", () => {
-    const bg = btn.getAttribute("data-bg");
-    document.body.setAttribute("data-bg", bg);
-    localStorage.setItem("nebula-bg", bg);
-  });
-});
-
-/* ============================================================
-   SEARCH HANDLER — BRAVE SEARCH
-   ============================================================ */
-function openSearch() {
-  let q = prompt("Search Brave or enter a URL:");
-  if (!q) return;
-
-  let target;
-  if (q.includes(".")) {
-    target = `https://${q}`;
-  } else {
-    target = `https://search.brave.com/search?q=${encodeURIComponent(q)}`;
-  }
-
-  window.location.href = `/p?u=${encodeURIComponent(target)}`;
-}
-
-</script>
-
-</body>
-</html>
