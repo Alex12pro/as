@@ -3,166 +3,142 @@ export const config = {
 };
 
 export default async function handler(request) {
-  const reqURL = new URL(request.url);
+  const req = new URL(request.url);
 
-  // ===============================
-  // VALIDATION
-  // ===============================
-  if (reqURL.pathname !== "/p") {
-    return new Response("Nebula 2.0 Proxy Active", { status: 200 });
+  if (req.pathname !== "/p") {
+    return new Response("Nebula Proxy 2.1 active", { status: 200 });
   }
 
-  const encoded = reqURL.searchParams.get("u");
+  const encoded = req.searchParams.get("u");
   if (!encoded) return new Response("Missing URL", { status: 400 });
 
-  let target;
+  let targetURL;
   try {
-    target = new URL(encoded);
+    targetURL = new URL(encoded);
   } catch {
-    return new Response("Invalid target URL", { status: 400 });
+    return new Response("Invalid URL", { status: 400 });
   }
 
-  // ===============================
-  // FETCH PROXIED CONTENT
-  // ===============================
-  const upstream = await fetch(target.toString(), {
+  const upstream = await fetch(targetURL.toString(), {
     method: request.method,
-    headers: rewriteRequestHeaders(request.headers, target),
-    body: request.method !== "GET" && request.method !== "HEAD" ? request.body : undefined,
-    redirect: "manual",
+    headers: rewriteRequestHeaders(request.headers, targetURL),
+    body: request.method === "GET" ? undefined : request.body,
+    redirect: "manual"
   });
 
   const contentType = upstream.headers.get("content-type") || "";
 
-  // ===============================
-  // NON-HTML — STREAM THROUGH
-  // ===============================
   if (!contentType.includes("text/html")) {
     return new Response(upstream.body, {
       status: upstream.status,
-      headers: rewriteHeaders(upstream.headers, target),
+      headers: rewriteResponseHeaders(upstream.headers)
     });
   }
 
-  // ===============================
-  // FULL HTML REWRITE
-  // ===============================
   let html = await upstream.text();
 
-  // Base URL for resolving relative paths
-  const base = target.origin;
+  // Fix relative paths by inserting base tag
+  html = html.replace("<head>", `<head><base href="${targetURL.origin}">`);
 
-  // Rewrite ALL attributes containing URLs
-  html = html
-    .replace(/href="(.*?)"/gi, (_, url) => `href="${rewriteURL(url, base)}"`)
-    .replace(/src="(.*?)"/gi, (_, url) => `src="${rewriteURL(url, base)}"`)
-    .replace(/action="(.*?)"/gi, (_, url) => `action="${rewriteURL(url, base)}"`)
-    .replace(/content="0;url=(.*?)"/gi, (_, url) => `content="0;url=${rewriteURL(url, base)}"`);
+  html = rewriteHTML(html, targetURL);
 
-  // Rewrite JavaScript inline URL references
-  html = rewriteJSInline(html, base);
-
-  // Force window.location / open() to stay in proxy
-  html += `
-<script>
-(function() {
-  const prox = (u) => "/p?u=" + encodeURIComponent(u);
-
-  const openOrig = window.open;
-  window.open = function(url, n, s) {
-    return openOrig(prox(url), n, s);
-  };
-
-  const assignOrig = window.location.assign;
-  window.location.assign = function(url) {
-    assignOrig(prox(url));
-  };
-
-  const replaceOrig = window.location.replace;
-  window.location.replace = function(url) {
-    replaceOrig(prox(url));
-  };
-})();
-</script>
-`;
-
-  // ===============================
-  // RETURN REWRITTEN HTML
-  // ===============================
   return new Response(html, {
     status: upstream.status,
-    headers: {
-      "content-type": "text/html; charset=UTF-8",
-      "cache-control": "no-store",
-    },
+    headers: { "content-type": "text/html; charset=utf-8" }
   });
 }
 
-/* ============================================================
-   URL REWRITING
-============================================================ */
+/* ================================================================
+   MAIN HTML REWRITE
+================================================================ */
 
-function rewriteURL(url, base) {
+function rewriteHTML(html, baseURL) {
+  const proxify = (url) => proxyURL(url, baseURL);
+
+  // attr rewrites
+  html = html
+    .replace(/href="([^"]*)"/gi, (_, url) => `href="${proxify(url)}"`)
+    .replace(/src="([^"]*)"/gi, (_, url) => `src="${proxify(url)}"`)
+    .replace(/srcset="([^"]*)"/gi, (_, set) => `srcset="${rewriteSrcSet(set, baseURL)}"`)
+    .replace(/content="0;url=([^"]*)"/gi, (_, url) => `content="0;url=${proxify(url)}"`);
+
+  // Inline JS URLs
+  html = html.replace(/(["'`])(https?:\/\/[^"'`]+)\1/g, (m, q, url) => {
+    return `${q}${proxify(url)}${q}`;
+  });
+
+  // Force JS navigation inside proxy
+  html += injectNavigationLock();
+
+  return html;
+}
+
+/* ================================================================
+   BUILD PROXY URL
+================================================================ */
+
+function proxyURL(url, baseURL) {
   if (!url || url.startsWith("javascript:") || url.startsWith("#")) return url;
 
-  // DDG redirect
-  if (url.startsWith("/l/?uddg=")) {
-    const real = decodeURIComponent(url.split("uddg=")[1]);
-    return `/p?u=${encodeURIComponent(real)}`;
-  }
-
-  // Brave redirect
-  if (url.includes("redirect_url=")) {
-    const real = url.split("redirect_url=")[1];
-    return `/p?u=${encodeURIComponent(real)}`;
-  }
-
-  // Absolute
+  // absolute relative fix
   try {
-    const abs = new URL(url, base).href;
-    return `/p?u=${encodeURIComponent(abs)}`;
+    url = new URL(url, baseURL).href;
   } catch {
     return url;
   }
+
+  return "/p?u=" + encodeURIComponent(url);
 }
 
-/* ============================================================
-   REWRITE HEADERS
-============================================================ */
-
-function rewriteHeaders(headers, target) {
-  const newHeaders = new Headers(headers);
-
-  newHeaders.set("access-control-allow-origin", "*");
-  newHeaders.delete("content-security-policy");
-  newHeaders.delete("content-security-policy-report-only");
-  newHeaders.delete("clear-site-data");
-
-  return newHeaders;
+function rewriteSrcSet(set, baseURL) {
+  return set
+    .split(",")
+    .map((entry) => {
+      const parts = entry.trim().split(" ");
+      parts[0] = proxyURL(parts[0], baseURL);
+      return parts.join(" ");
+    })
+    .join(", ");
 }
 
-/* ============================================================
-   REWRITE REQUEST HEADERS
-============================================================ */
+/* ================================================================
+   JS CONTROL REWRITE
+================================================================ */
 
-function rewriteRequestHeaders(headers, target) {
-  const out = new Headers(headers);
+function injectNavigationLock() {
+  return `
+<script>
+(function(){
+  const p = u => "/p?u=" + encodeURIComponent(u);
 
-  out.set("host", target.host);
-  out.set("origin", target.origin);
-  out.set("referer", target.href);
+  const open = window.open;
+  window.open = (u,n,s) => open(p(u),n,s);
 
-  return out;
+  const assign = window.location.assign;
+  window.location.assign = u => assign(p(u));
+
+  const replace = window.location.replace;
+  window.location.replace = u => replace(p(u));
+})();
+</script>`;
 }
 
-/* ============================================================
-   INLINE JS REWRITE
-============================================================ */
+/* ================================================================
+   HEADERS
+================================================================ */
 
-function rewriteJSInline(html, base) {
-  // rewrite top-level URLs inside JS strings
-  return html.replace(
-    /(["'`])((https?:\/\/|\/)[^"'`]+)\1/g,
-    (match, quote, url) => `${quote}${rewriteURL(url, base)}${quote}`
-  );
+function rewriteRequestHeaders(headers, targetURL) {
+  const h = new Headers(headers);
+  h.set("host", targetURL.host);
+  h.set("origin", targetURL.origin);
+  h.set("referer", targetURL.href);
+  return h;
+}
+
+function rewriteResponseHeaders(headers) {
+  const h = new Headers(headers);
+  h.delete("content-security-policy");
+  h.delete("clear-site-data");
+  h.set("access-control-allow-origin", "*");
+  return h;
 }
