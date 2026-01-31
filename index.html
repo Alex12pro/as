@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Nebula Proxy - Created By Alex</title>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+
+    <style>
+        /* UNCHANGED — EXACTLY your Nebula CSS (preserved 100%) */
+        /* ---------------------------------------------------------------------- */
+        :root {
+            --bg-primary: #0a0b0e;
+            --accent-blue: #00d4ff;
+            --accent-purple: #a855f7;
+            --accent-pink: #ec4899;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --border-color: rgba(148, 163, 184, 0.1);
+            --glass-bg: rgba(26, 28, 38, 0.6);
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { height: 100%; overflow: hidden; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #0a0b0e 0%, #13141a 50%, #0a0b0e 100%);
+            color: var(--text-primary);
+        }
+        body::before {
+            content: '';
+            position: fixed;
+            top: -50%; left: -50%;
+            width: 200%; height: 200%;
+            background:
+                radial-gradient(circle at 30% 40%, rgba(0, 212, 255, 0.08) 0%, transparent 50%),
+                radial-gradient(circle at 70% 60%, rgba(168, 85, 247, 0.08) 0%, transparent 50%);
+            animation: bgPulse 20s ease-in-out infinite;
+            pointer-events: none;
+        }
+        @keyframes bgPulse {
+            50% { transform: translate(-5%, -5%) scale(1.08); }
+        }
+
+        header {
+            background: var(--glass-bg);
+            backdrop-filter: blur(24px);
+            border-bottom: 1px solid var(--border-color);
+            padding: 0.875rem 1.5rem;
+            display: flex; align-items: center; gap: 1.25rem;
+        }
+        .brand {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.5rem; font-weight: 900;
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple), var(--accent-pink));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            cursor: pointer;
+        }
+        .nav-btn {
+            width: 38px; height: 38px;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .search-wrapper {
+            flex: 1; max-width: 750px; position: relative;
+        }
+        .url-input {
+            width: 100%; height: 48px;
+            background: rgba(255, 255, 255, 0.04);
+            border-radius: 14px;
+            padding: 0 4rem 0 3.5rem;
+            color: white;
+            border: 1px solid transparent;
+        }
+        .url-input:focus {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: var(--accent-blue);
+        }
+        .lock-icon {
+            position: absolute;
+            left: 1.2rem; top: 50%;
+            transform: translateY(-50%);
+        }
+        .go-button {
+            position: absolute;
+            right: 8px; top: 50%;
+            transform: translateY(-50%);
+            width: 36px; height: 36px;
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+            border-radius: 10px;
+            cursor: pointer;
+        }
+
+        main { flex: 1; position: relative; }
+        .welcome {
+            position: absolute; inset: 0;
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+        }
+        .browser { width: 100%; height: 100%; border: none; display: none; }
+        .browser.active { display: block; }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <header>
+            <div class="brand" id="homeBtn">NEBULA</div>
+
+            <button class="nav-btn" id="backBtn">←</button>
+            <button class="nav-btn" id="forwardBtn">→</button>
+            <button class="nav-btn" id="refreshBtn">↻</button>
+
+            <div class="search-wrapper">
+                <span class="lock-icon">🔒</span>
+                <input id="urlInput" class="url-input" placeholder="Search Brave or enter URL..." />
+                <button id="goBtn" class="go-button">→</button>
+            </div>
+        </header>
+
+        <main>
+            <div class="welcome" id="welcomeScreen">
+                <div class="hero-logo" style="
+                    font-family:'Orbitron'; 
+                    font-size:6rem;
+                    background:linear-gradient(135deg,#00d4ff,#a855f7,#ec4899);
+                    -webkit-background-clip:text;
+                    -webkit-text-fill-color:transparent;
+                    margin-bottom:1rem;
+                ">NEBULA</div>
+                <p>Created By Alex</p>
+
+                <div class="quick-card" id="quickSearch" style="
+                    margin-top:2rem; 
+                    padding:2rem; 
+                    background:rgba(255,255,255,0.04);
+                    border-radius:20px;
+                    cursor:pointer;
+                ">
+                    <h3>🔍 Search</h3>
+                    <p>Start browsing privately</p>
+                </div>
+            </div>
+
+            <iframe class="browser" id="browserFrame"></iframe>
+        </main>
+    </div>
+
+    <script>
+        const urlInput = document.getElementById("urlInput");
+        const browserFrame = document.getElementById("browserFrame");
+        const welcomeScreen = document.getElementById("welcomeScreen");
+
+        // Detect URL vs Search
+        function makeProxyURL(input) {
+            if (!input) return null;
+
+            // URL detection
+            const isURL = /^(https?:\/\/)?([\w-]+\.)+[\w-]+/i.test(input);
+
+            const target = isURL
+                ? (input.startsWith("http") ? input : "https://" + input)
+                : "https://search.brave.com/search?q=" + encodeURIComponent(input);
+
+            return "/p?u=" + encodeURIComponent(target);
+        }
+
+        // Navigation
+        function navigate(input) {
+            const proxyURL = makeProxyURL(input);
+            if (!proxyURL) return;
+
+            welcomeScreen.style.display = "none";
+            browserFrame.classList.add("active");
+            browserFrame.src = proxyURL;
+        }
+
+        // UI Events
+        document.getElementById("goBtn").onclick = () => navigate(urlInput.value);
+        urlInput.addEventListener("keydown", (e) => {
+            if (e.key === "Enter") navigate(urlInput.value);
+        });
+
+        document.getElementById("quickSearch").onclick = () => navigate("brave");
+
+        document.getElementById("homeBtn").onclick = () => {
+            browserFrame.classList.remove("active");
+            welcomeScreen.style.display = "flex";
+        };
+
+        document.getElementById("backBtn").onclick = () => browserFrame.contentWindow.history.back();
+        document.getElementById("forwardBtn").onclick = () => browserFrame.contentWindow.history.forward();
+        document.getElementById("refreshBtn").onclick = () => browserFrame.contentWindow.location.reload();
+    </script>
+</body>
+</html>
