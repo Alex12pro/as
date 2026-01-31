@@ -6,7 +6,7 @@ export default async function handler(request) {
   const url = new URL(request.url);
 
   // =====================
-  // HOME PAGE
+  // HOME PAGE (Brave Search)
   // =====================
   if (url.pathname === "/") {
     return new Response(
@@ -63,32 +63,25 @@ function go(e) {
   if (!encoded) return new Response("Missing URL", { status: 400 });
 
   let targetUrl;
-  try {
-    targetUrl = new URL(encoded);
-  } catch {
-    return new Response("Invalid URL", { status: 400 });
-  }
+  try { targetUrl = new URL(encoded); }
+  catch { return new Response("Invalid URL", { status: 400 }); }
 
-  const browserHeaders = new Headers();
-  browserHeaders.set(
-    "User-Agent",
-    request.headers.get("User-Agent") ||
-      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
-  );
-  browserHeaders.set(
-    "Accept",
-    "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8"
-  );
-  browserHeaders.set("Accept-Language", "en-US,en;q=0.9");
-  browserHeaders.set("Upgrade-Insecure-Requests", "1");
+  // Browser-like headers (safe)
+  const hdr = new Headers();
+  hdr.set("User-Agent", request.headers.get("User-Agent") ||
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122 Safari/537.36");
+  hdr.set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8");
+  hdr.set("Accept-Language", "en-US,en;q=0.9");
+  hdr.set("Upgrade-Insecure-Requests", "1");
 
+  // Fetch upstream
   const upstream = await fetch(targetUrl.toString(), {
-    headers: browserHeaders,
-    redirect: "manual",
+    headers: hdr,
+    redirect: "manual"
   });
 
-  // Handle redirects
-  if ([301, 302, 303, 307, 308].includes(upstream.status)) {
+  // Redirect handling
+  if ([301,302,303,307,308].includes(upstream.status)) {
     const loc = upstream.headers.get("location");
     if (loc) {
       const next = new URL(loc, targetUrl).href;
@@ -104,35 +97,31 @@ function go(e) {
   if (type.includes("text/css")) {
     let css = await upstream.text();
 
-    css = css.replace(
-      /url\(\s*(['"]?)([^'")]+)\1\s*\)/gi,
-      (m, q, u) => {
-        const abs = new URL(u, targetUrl).href;
-        return `url("/p?u=${encodeURIComponent(abs)}")`;
-      }
-    );
+    // url(...)
+    css = css.replace(/url\(\s*(['"]?)([^'")]+)\1\s*\)/gi, (m,q,u) => {
+      const abs = new URL(u, targetUrl).href;
+      return `url("/p?u=${encodeURIComponent(abs)}")`;
+    });
 
-    css = css.replace(
-      /@import\s+(['"])(.*?)\1/gi,
-      (m, q, u) => {
-        const abs = new URL(u, targetUrl).href;
-        return `@import "/p?u=${encodeURIComponent(abs)}"`;
-      }
-    );
+    // @import
+    css = css.replace(/@import\s+(['"])(.*?)\1/gi, (m,q,u) => {
+      const abs = new URL(u, targetUrl).href;
+      return `@import "/p?u=${encodeURIComponent(abs)}"`;
+    });
 
     return new Response(css, {
       status: upstream.status,
-      headers: { "Content-Type": "text/css" },
+      headers: { "Content-Type": "text/css" }
     });
   }
 
   // =====================
-  // NON-HTML (images, JS, fonts)
+  // NON-HTML RESOURCES
   // =====================
   if (!type.includes("text/html")) {
     return new Response(upstream.body, {
       status: upstream.status,
-      headers: upstream.headers,
+      headers: upstream.headers
     });
   }
 
@@ -142,9 +131,9 @@ function go(e) {
   let html = await upstream.text();
   const base = targetUrl.href;
 
+  // Helper for URLs
   const proxify = (raw) => {
     if (!raw) return raw;
-
     const link = raw.trim();
     if (
       link.startsWith("#") ||
@@ -152,41 +141,35 @@ function go(e) {
       link.startsWith("data:") ||
       link.startsWith("mailto:") ||
       link.startsWith("tel:")
-    ) {
-      return raw;
-    }
+    ) return raw;
 
     try {
       const abs = new URL(link, base).href;
       return "/p?u=" + encodeURIComponent(abs);
-    } catch {
-      return raw;
-    }
+    } catch { return raw; }
   };
 
-  const rewriteSrcset = (value) => {
-    return value.split(",").map((part) => {
+  // srcset
+  const rewriteSrcset = (value) =>
+    value.split(",").map(part => {
       const tr = part.trim();
       if (!tr) return tr;
-      const [url, ...rest] = tr.split(/\s+/);
-      return [proxify(url), ...rest].join(" ");
+      const [u,...rest] = tr.split(/\s+/);
+      return [proxify(u), ...rest].join(" ");
     }).join(", ");
-  };
 
-  const rewriteCssInline = (css) => {
-    css = css.replace(/url\(\s*(['"]?)([^'")]+)\1\s*\)/gi, (m, q, u) => {
-      return `url("${proxify(u)}")`;
-    });
-    css = css.replace(/@import\s+(['"])(.*?)\1/gi, (m, q, u) => {
-      return `@import "${proxify(u)}"`;
-    });
-    return css;
-  };
+  // Inline CSS
+  const rewriteCssInline = (css) =>
+    css
+      .replace(/url\(\s*(['"]?)([^'")]+)\1\s*\)/gi,
+        (m,q,u) => `url("${proxify(u)}")`)
+      .replace(/@import\s+(['"])(.*?)\1/gi,
+        (m,q,u) => `@import "${proxify(u)}"`);
 
-  // Rewrite HTML attributes
+  // Attributes
   html = html.replace(
-    /\b(href|src|action|poster|data-src|data-href)\s*=\s*("([^"]*)"|'([^']*)')/gi,
-    (m, attr, quoted, dbl, sgl) => {
+    /\b(href|src|action|poster|data-src|data-href)=("([^"]*)"|'([^']*)')/gi,
+    (m,attr,quoted,dbl,sgl) => {
       const v = dbl ?? sgl ?? "";
       const nv = proxify(v);
       const q = quoted[0];
@@ -194,76 +177,69 @@ function go(e) {
     }
   );
 
-  // srcset rewrite
+  // srcset
   html = html.replace(
-    /\bsrcset\s*=\s*("([^"]*)"|'([^']*)')/gi,
-    (m, quoted, dbl, sgl) => {
+    /\bsrcset=("([^"]*)"|'([^']*)')/gi,
+    (m,quoted,dbl,sgl) => {
       const v = dbl ?? sgl ?? "";
-      const nv = rewriteSrcset(v);
       const q = quoted[0];
-      return `srcset=${q}${nv}${q}`;
+      return `srcset=${q}${rewriteSrcset(v)}${q}`;
     }
   );
 
-  // inline style=""
+  // style=""
   html = html.replace(
-    /\bstyle\s*=\s*("([^"]*)"|'([^']*)')/gi,
-    (m, quoted, dbl, sgl) => {
+    /\bstyle=("([^"]*)"|'([^']*)')/gi,
+    (m,quoted,dbl,sgl) => {
       const v = dbl ?? sgl ?? "";
-      const nv = rewriteCssInline(v);
       const q = quoted[0];
-      return `style=${q}${nv}${q}`;
+      return `style=${q}${rewriteCssInline(v)}${q}`;
     }
   );
 
-  // <style> blocks
+  // <style>
   html = html.replace(
     /<style[^>]*>([\s\S]*?)<\/style>/gi,
-    (m, css) => m.replace(css, rewriteCssInline(css))
+    (m,css) => m.replace(css, rewriteCssInline(css))
   );
 
   // meta refresh
   html = html.replace(
-    /<meta[^>]+http-equiv\s*=\s*(['"]?)refresh\1[^>]*content\s*=\s*(['"])([^'"]*)\2/gi,
-    (m, _q1, q2, content) => {
+    /http-equiv=["']refresh["'][^>]*content=["']([^"']*)["']/gi,
+    (m,content) => {
       const parts = content.split(/url=/i);
       if (parts.length < 2) return m;
       const before = parts[0];
-      const after = parts.slice(1).join("url=");
-      const newUrl = proxify(after.trim());
-      return m.replace(content, `${before}url=${newUrl}`);
+      const after = parts[1];
+      return m.replace(content, `${before}url=${proxify(after)}`);
     }
   );
 
   // iframe src
   html = html.replace(
     /<iframe[^>]+src="([^"]+)"/gi,
-    (m, src) => {
-      const abs = new URL(src, base).href;
-      return m.replace(src, "/p?u=" + encodeURIComponent(abs));
-    }
+    (m,src) => m.replace(src, proxify(src))
   );
 
   // iframe srcdoc
   html = html.replace(
     /srcdoc="([^"]*)"/gi,
-    (m, doc) => {
+    (m,doc) => {
       let d = doc
-        .replace(/href="([^"]+)"/gi, (m, l) => {
-          return `href="${proxify(l)}"`;
-        })
-        .replace(/src="([^"]+)"/gi, (m, l) => {
-          return `src="${proxify(l)}"`;
-        });
+        .replace(/href="([^"]+)"/gi, (m,l) => `href="${proxify(l)}"`)
+        .replace(/src="([^"]+)"/gi, (m,l) => `src="${proxify(l)}"`);
       d = d.replace(/"/g, "&quot;");
       return `srcdoc="${d}"`;
     }
   );
 
-  // click handler backup
+  // =====================
+  // Inject click + fetch/XHR wrappers
+  // =====================
   html = html.replace(
     "</body>",
 `<script>
+// CLICK INTERCEPT (keeps navigation inside /p?u=)
 document.addEventListener('click', e => {
   const a = e.target.closest && e.target.closest('a');
   if (!a || !a.href) return;
@@ -271,11 +247,40 @@ document.addEventListener('click', e => {
   e.preventDefault();
   location.href = '/p?u=' + encodeURIComponent(a.href);
 }, true);
+
+// FETCH WRAPPER (educational)
+(function(){
+  const oldFetch = window.fetch;
+  window.fetch = function(u,opts){
+    try {
+      if (typeof u === "string") {
+        const abs = new URL(u, window.location.href).href;
+        return oldFetch('/p?u=' + encodeURIComponent(abs), opts);
+      }
+      if (u instanceof URL) {
+        return oldFetch('/p?u=' + encodeURIComponent(u.href), opts);
+      }
+    } catch(e){}
+    return oldFetch(u,opts);
+  };
+})();
+
+// XHR WRAPPER (educational)
+(function(){
+  const oldOpen = XMLHttpRequest.prototype.open;
+  XMLHttpRequest.prototype.open = function(m,u){
+    try {
+      const abs = new URL(u, window.location.href).href;
+      return oldOpen.apply(this,[m, '/p?u=' + encodeURIComponent(abs)]);
+    } catch(e){}
+    return oldOpen.apply(this,[m,u]);
+  };
+})();
 </script></body>`
   );
 
   return new Response(html, {
     status: upstream.status,
-    headers: { "Content-Type": "text/html; charset=UTF-8" },
+    headers: { "Content-Type": "text/html; charset=UTF-8" }
   });
 }
