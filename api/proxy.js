@@ -53,7 +53,7 @@ function go(e) {
   }
 
   // =====================
-  // PROXY MODE — /p
+  // PROXY ROUTE
   // =====================
   if (url.pathname !== "/p") {
     return new Response("Not found", { status: 404 });
@@ -64,62 +64,88 @@ function go(e) {
 
   let targetUrl;
   try {
-    // searchParams.get() is already decoded
     targetUrl = new URL(encoded);
   } catch {
     return new Response("Invalid URL", { status: 400 });
   }
 
-  // Browser-like headers (helps some sites; doesn’t “bypass” protections)
-  const upstreamHeaders = new Headers();
-  upstreamHeaders.set(
+  const browserHeaders = new Headers();
+  browserHeaders.set(
     "User-Agent",
     request.headers.get("User-Agent") ||
       "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
   );
-  upstreamHeaders.set(
+  browserHeaders.set(
     "Accept",
     "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8"
   );
-  upstreamHeaders.set("Accept-Language", "en-US,en;q=0.9");
-  upstreamHeaders.set("Upgrade-Insecure-Requests", "1");
+  browserHeaders.set("Accept-Language", "en-US,en;q=0.9");
+  browserHeaders.set("Upgrade-Insecure-Requests", "1");
 
-  // Handle redirects ourselves so Location stays in /p?u=
-  const res = await fetch(targetUrl.toString(), {
-    headers: upstreamHeaders,
+  const upstream = await fetch(targetUrl.toString(), {
+    headers: browserHeaders,
     redirect: "manual",
   });
 
-  // If upstream redirects, rewrite Location to stay in proxy
-  if ([301, 302, 303, 307, 308].includes(res.status)) {
-    const loc = res.headers.get("location");
+  // Handle redirects
+  if ([301, 302, 303, 307, 308].includes(upstream.status)) {
+    const loc = upstream.headers.get("location");
     if (loc) {
       const next = new URL(loc, targetUrl).href;
       return Response.redirect("/p?u=" + encodeURIComponent(next), 302);
     }
   }
 
-  const type = res.headers.get("content-type") || "";
+  const type = upstream.headers.get("content-type") || "";
 
-  // Pass non-HTML through
-  if (!type.includes("text/html")) {
-    // NOTE: many sites rely on correct content-type for CSS/JS/images
-    return new Response(res.body, {
-      status: res.status,
-      headers: res.headers,
+  // =====================
+  // CSS REWRITE
+  // =====================
+  if (type.includes("text/css")) {
+    let css = await upstream.text();
+
+    css = css.replace(
+      /url\(\s*(['"]?)([^'")]+)\1\s*\)/gi,
+      (m, q, u) => {
+        const abs = new URL(u, targetUrl).href;
+        return `url("/p?u=${encodeURIComponent(abs)}")`;
+      }
+    );
+
+    css = css.replace(
+      /@import\s+(['"])(.*?)\1/gi,
+      (m, q, u) => {
+        const abs = new URL(u, targetUrl).href;
+        return `@import "/p?u=${encodeURIComponent(abs)}"`;
+      }
+    );
+
+    return new Response(css, {
+      status: upstream.status,
+      headers: { "Content-Type": "text/css" },
     });
   }
 
-  let html = await res.text();
+  // =====================
+  // NON-HTML (images, JS, fonts)
+  // =====================
+  if (!type.includes("text/html")) {
+    return new Response(upstream.body, {
+      status: upstream.status,
+      headers: upstream.headers,
+    });
+  }
 
-  // Use the FULL page URL as base (not just origin) for correct relative resolution
-  const baseForRelative = targetUrl.href;
+  // =====================
+  // HTML REWRITE
+  // =====================
+  let html = await upstream.text();
+  const base = targetUrl.href;
 
-  const proxifyUrl = (raw) => {
+  const proxify = (raw) => {
     if (!raw) return raw;
-    const link = raw.trim();
 
-    // Skip anchors and JS pseudo-links
+    const link = raw.trim();
     if (
       link.startsWith("#") ||
       link.startsWith("javascript:") ||
@@ -131,7 +157,7 @@ function go(e) {
     }
 
     try {
-      const abs = new URL(link, baseForRelative).href;
+      const abs = new URL(link, base).href;
       return "/p?u=" + encodeURIComponent(abs);
     } catch {
       return raw;
@@ -139,99 +165,109 @@ function go(e) {
   };
 
   const rewriteSrcset = (value) => {
-    // srcset: "url1 1x, url2 2x"
-    try {
-      return value
-        .split(",")
-        .map((part) => {
-          const trimmed = part.trim();
-          if (!trimmed) return trimmed;
-          const [u, ...rest] = trimmed.split(/\s+/);
-          return [proxifyUrl(u), ...rest].join(" ");
-        })
-        .join(", ");
-    } catch {
-      return value;
-    }
+    return value.split(",").map((part) => {
+      const tr = part.trim();
+      if (!tr) return tr;
+      const [url, ...rest] = tr.split(/\s+/);
+      return [proxify(url), ...rest].join(" ");
+    }).join(", ");
   };
 
-  const rewriteCss = (cssText) => {
-    // url(...)
-    cssText = cssText.replace(/url\(\s*(['"]?)([^'")]+)\1\s*\)/gi, (m, q, u) => {
-      const nu = proxifyUrl(u);
-      return `url("${nu}")`;
+  const rewriteCssInline = (css) => {
+    css = css.replace(/url\(\s*(['"]?)([^'")]+)\1\s*\)/gi, (m, q, u) => {
+      return `url("${proxify(u)}")`;
     });
-
-    // @import "..."
-    cssText = cssText.replace(/@import\s+(['"])(.*?)\1/gi, (m, q, u) => {
-      return `@import "${proxifyUrl(u)}"`;
+    css = css.replace(/@import\s+(['"])(.*?)\1/gi, (m, q, u) => {
+      return `@import "${proxify(u)}"`;
     });
-
-    return cssText;
+    return css;
   };
 
-  // 1) Rewrite common URL-carrying attributes (both " and ')
-  // Includes: href, src, action, poster, data-src, data-href, etc.
+  // Rewrite HTML attributes
   html = html.replace(
     /\b(href|src|action|poster|data-src|data-href)\s*=\s*("([^"]*)"|'([^']*)')/gi,
     (m, attr, quoted, dbl, sgl) => {
       const v = dbl ?? sgl ?? "";
-      const nv = proxifyUrl(v);
+      const nv = proxify(v);
       const q = quoted[0];
       return `${attr}=${q}${nv}${q}`;
     }
   );
 
-  // 2) Rewrite srcset
-  html = html.replace(/\bsrcset\s*=\s*("([^"]*)"|'([^']*)')/gi, (m, quoted, dbl, sgl) => {
-    const v = dbl ?? sgl ?? "";
-    const nv = rewriteSrcset(v);
-    const q = quoted[0];
-    return `srcset=${q}${nv}${q}`;
-  });
-
-  // 3) Rewrite inline style attributes: style="...url(...)..."
-  html = html.replace(/\bstyle\s*=\s*("([^"]*)"|'([^']*)')/gi, (m, quoted, dbl, sgl) => {
-    const v = dbl ?? sgl ?? "";
-    const nv = rewriteCss(v);
-    const q = quoted[0];
-    return `style=${q}${nv}${q}`;
-  });
-
-  // 4) Rewrite <style> blocks
-  html = html.replace(/<style[^>]*>([\s\S]*?)<\/style>/gi, (m, css) => {
-    return m.replace(css, rewriteCss(css));
-  });
-
-  // 5) Rewrite meta refresh: <meta http-equiv="refresh" content="0; url=...">
+  // srcset rewrite
   html = html.replace(
-    /<meta[^>]+http-equiv\s*=\s*(['"]?)refresh\1[^>]*content\s*=\s*(['"])([^'"]*)\2[^>]*>/gi,
+    /\bsrcset\s*=\s*("([^"]*)"|'([^']*)')/gi,
+    (m, quoted, dbl, sgl) => {
+      const v = dbl ?? sgl ?? "";
+      const nv = rewriteSrcset(v);
+      const q = quoted[0];
+      return `srcset=${q}${nv}${q}`;
+    }
+  );
+
+  // inline style=""
+  html = html.replace(
+    /\bstyle\s*=\s*("([^"]*)"|'([^']*)')/gi,
+    (m, quoted, dbl, sgl) => {
+      const v = dbl ?? sgl ?? "";
+      const nv = rewriteCssInline(v);
+      const q = quoted[0];
+      return `style=${q}${nv}${q}`;
+    }
+  );
+
+  // <style> blocks
+  html = html.replace(
+    /<style[^>]*>([\s\S]*?)<\/style>/gi,
+    (m, css) => m.replace(css, rewriteCssInline(css))
+  );
+
+  // meta refresh
+  html = html.replace(
+    /<meta[^>]+http-equiv\s*=\s*(['"]?)refresh\1[^>]*content\s*=\s*(['"])([^'"]*)\2/gi,
     (m, _q1, q2, content) => {
       const parts = content.split(/url=/i);
       if (parts.length < 2) return m;
       const before = parts[0];
       const after = parts.slice(1).join("url=");
-      const newUrl = proxifyUrl(after.trim());
+      const newUrl = proxify(after.trim());
       return m.replace(content, `${before}url=${newUrl}`);
     }
   );
 
-  // Optional: prevent new tabs from escaping (not perfect, but helps)
-  html = html.replace(/\btarget\s*=\s*(['"]?)_blank\1/gi, 'target="_self"');
+  // iframe src
+  html = html.replace(
+    /<iframe[^>]+src="([^"]+)"/gi,
+    (m, src) => {
+      const abs = new URL(src, base).href;
+      return m.replace(src, "/p?u=" + encodeURIComponent(abs));
+    }
+  );
 
-  // Add a tiny safety net click handler (some sites rely on JS-created links)
-  // NOTE: Some strict CSP sites may block this; the rewriting above still helps a lot.
+  // iframe srcdoc
+  html = html.replace(
+    /srcdoc="([^"]*)"/gi,
+    (m, doc) => {
+      let d = doc
+        .replace(/href="([^"]+)"/gi, (m, l) => {
+          return `href="${proxify(l)}"`;
+        })
+        .replace(/src="([^"]+)"/gi, (m, l) => {
+          return `src="${proxify(l)}"`;
+        });
+      d = d.replace(/"/g, "&quot;");
+      return `srcdoc="${d}"`;
+    }
+  );
+
+  // click handler backup
   html = html.replace(
     "</body>",
 `<script>
-document.addEventListener('click', (e) => {
+document.addEventListener('click', e => {
   const a = e.target.closest && e.target.closest('a');
   if (!a || !a.href) return;
-
-  // already proxied
   if (a.href.includes('/p?u=')) return;
-
-  // keep inside proxy
   e.preventDefault();
   location.href = '/p?u=' + encodeURIComponent(a.href);
 }, true);
@@ -239,7 +275,7 @@ document.addEventListener('click', (e) => {
   );
 
   return new Response(html, {
-    status: res.status,
+    status: upstream.status,
     headers: { "Content-Type": "text/html; charset=UTF-8" },
   });
 }
