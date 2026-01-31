@@ -31,49 +31,47 @@
       font-family: Inter, sans-serif;
     }
 
-    /* 🔥 FIXED BACKGROUND ENGINE --------------------------- */
+    /* 🔥 FIXED BACKGROUND ENGINE (UI UNCHANGED) ------------------------ */
     body::before {
       content: "";
       position: fixed;
       inset: 0;
       z-index: 0;
       pointer-events: none;
-
-      /* DEFAULT BACKGROUND (Nebula gradient) */
+      transition: background 0.35s ease;
       background:
-        radial-gradient(circle at 20% 30%, rgba(0,212,255,0.06) 0%, transparent 60%),
-        radial-gradient(circle at 80% 70%, rgba(168,85,247,0.06) 0%, transparent 60%);
-      transition: background 0.5s ease;
+        radial-gradient(circle at 30% 40%, rgba(0,212,255,0.08) 0%, transparent 50%),
+        radial-gradient(circle at 70% 60%, rgba(168,85,247,0.08) 0%, transparent 50%);
     }
 
-    /* ⭐ Stars */
-    body[data-bg="stars"]::before {
-      background:
-        radial-gradient(circle at 20% 30%, rgba(0,212,255,0.06) 0%, transparent 60%),
-        url("https://i.imgur.com/zYdXtKW.png") repeat;
-      background-size: cover;
-    }
-
-    /* ▦ Grid Glow */
+    /* Grid Glow */
     body[data-bg="grid"]::before {
       background:
         radial-gradient(circle at 20% 30%, rgba(0,212,255,0.05) 0%, transparent 60%),
         linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
         linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
-      background-size: 200% 200%, 40px 40px, 40px 40px;
+      background-size: 200% 200%, 35px 35px, 35px 35px;
     }
 
-    /* 🌊 Waves */
+    /* Stars */
+    body[data-bg="stars"]::before {
+      background:
+        radial-gradient(circle at 30% 40%, rgba(0,212,255,0.06) 0%, transparent 50%),
+        url("https://i.imgur.com/zYdXtKW.png") repeat;
+      background-size: cover;
+    }
+
+    /* Waves */
     body[data-bg="waves"]::before {
-      background: linear-gradient(135deg, #0e1117 0%, #1c1f29 100%);
+      background: linear-gradient(135deg,#0e1117,#1c1f29);
     }
 
-    /* ■ Solid */
+    /* Solid */
     body[data-bg="solid"]::before {
       background: #0a0b0e;
     }
 
-    /* THEME COLORS */
+    /* THEME COLORS (UNTOUCHED) */
     body[data-theme="nebula"] {
       --accent-blue: #00d4ff;
       --accent-purple: #a855f7;
@@ -94,7 +92,226 @@
       --accent-purple: #343c66;
     }
 
-    /* (rest of your CSS unchanged) */
+    /* EVERYTHING BELOW THIS IS YOUR ORIGINAL UI (UNCHANGED) */
+    #app {
+      position: relative;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      z-index: 1;
+    }
+
+    header {
+      background: var(--glass-bg);
+      backdrop-filter: blur(24px) saturate(180%);
+      border-bottom: 1px solid var(--border-color);
+      padding: 0.875rem 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 1.25rem;
+    }
+
+    .brand {
+      font-family: Orbitron, sans-serif;
+      font-size: 1.6rem;
+      font-weight: 900;
+      background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      cursor: pointer;
+    }
+
+    .nav-controls { display: flex; gap: 0.5rem; }
+
+    .nav-btn {
+      width: 38px;
+      height: 38px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      color: var(--text-primary);
+      cursor: pointer;
+      transition: 0.25s;
+    }
+
+    .nav-btn:hover {
+      border-color: var(--accent-blue);
+      transform: translateY(-2px);
+    }
+
+    .search-wrapper {
+      flex: 1;
+      max-width: 750px;
+      position: relative;
+    }
+
+    .lock-icon {
+      position: absolute;
+      top: 50%;
+      left: 1.2rem;
+      transform: translateY(-50%);
+      font-size: 1.1rem;
+    }
+
+    .url-input {
+      width: 100%;
+      height: 48px;
+      padding: 0 4rem 0 3.5rem;
+      border-radius: 14px;
+      background: rgba(255,255,255,0.06);
+      border: 2px solid transparent;
+      color: var(--text-primary);
+      outline: none;
+      transition: 0.3s;
+    }
+
+    .go-button {
+      position: absolute;
+      top: 50%;
+      right: 6px;
+      transform: translateY(-50%);
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      border: none;
+      background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+      color: white;
+      cursor: pointer;
+    }
+
+    main { flex: 1; position: relative; }
+
+    .welcome {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 1rem;
+    }
+
+    .hero-logo {
+      font-family: Orbitron, sans-serif;
+      font-size: 5rem;
+      font-weight: 900;
+      background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .hero-tagline {
+      font-size: 1.4rem;
+      color: #dbe7ff;
+      margin-bottom: 2rem;
+      letter-spacing: 0.4px;
+    }
+
+    .quick-card {
+      background: rgba(20,25,36,0.6);
+      border: 1px solid rgba(255,255,255,0.18);
+      border-radius: 20px;
+      padding: 2rem;
+      text-align: center;
+      cursor: pointer;
+      transition: 0.3s;
+      width: 260px;
+    }
+
+    .quick-card:hover {
+      transform: translateY(-10px);
+      border-color: var(--accent-blue);
+    }
+
+    .quick-card h3,
+    .quick-card p {
+      color: white !important;
+      font-weight: 500;
+    }
+
+    iframe.browser {
+      width: 100%;
+      height: 100%;
+      border: none;
+      display: none;
+      background: white;
+    }
+
+    iframe.active { display: block; }
+
+    .settings-panel {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.65);
+      backdrop-filter: blur(10px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 999;
+    }
+
+    .hidden { display: none !important; }
+
+    .settings-content {
+      width: 480px;
+      background: rgba(20, 22, 30, 0.9);
+      border-radius: 20px;
+      border: 1px solid var(--border-color);
+      padding: 2rem;
+    }
+
+    .settings-title {
+      font-family: Orbitron;
+      font-size: 2rem;
+      text-align: center;
+      background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 1.3rem;
+    }
+
+    .settings-subtitle {
+      color: #e8ecf5;
+      font-size: 1.2rem;
+      margin-bottom: 0.6rem;
+    }
+
+    .theme-options,
+    .bg-options {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 0.7rem;
+    }
+
+    .theme-btn,
+    .bg-btn {
+      background: rgba(255,255,255,0.08);
+      color: #f0f6ff;
+      border: 1px solid rgba(255,255,255,0.18);
+      padding: 0.85rem;
+      border-radius: 12px;
+      transition: 0.25s;
+      cursor: pointer;
+    }
+
+    .theme-btn:hover,
+    .bg-btn:hover {
+      background: rgba(255,255,255,0.14);
+      border-color: var(--accent-blue);
+      color: white;
+      transform: translateY(-3px);
+    }
+
+    .settings-close {
+      width: 100%;
+      padding: 0.9rem;
+      margin-top: 1.5rem;
+      background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+      border: none;
+      color: white;
+      border-radius: 14px;
+      cursor: pointer;
+    }
   </style>
 </head>
 
@@ -164,15 +381,18 @@
 
   <!-- SCRIPT -->
   <script type="module">
+
     const urlInput = document.getElementById("urlInput");
     const browserFrame = document.getElementById("browserFrame");
     const welcomeScreen = document.getElementById("welcomeScreen");
+
     const goBtn = document.getElementById("goBtn");
     const homeBtn = document.getElementById("homeBtn");
+    const brandBtn = document.getElementById("brandBtn");
     const quickCard = document.querySelector(".quick-card");
 
-    const settingsPanel = document.getElementById("settingsPanel");
     const settingsBtn = document.getElementById("settingsBtn");
+    const settingsPanel = document.getElementById("settingsPanel");
     const closeSettings = document.getElementById("closeSettings");
 
     const themeButtons = document.querySelectorAll(".theme-btn");
@@ -212,10 +432,13 @@
     });
 
     quickCard.addEventListener("click", () => navigate("brave"));
+    brandBtn.addEventListener("click", () => homeBtn.click());
 
+    /* SETTINGS PANEL */
     settingsBtn.addEventListener("click", () => settingsPanel.classList.remove("hidden"));
     closeSettings.addEventListener("click", () => settingsPanel.classList.add("hidden"));
 
+    /* THEME SYSTEM */
     function applyTheme(name) {
       document.body.dataset.theme = name;
       localStorage.setItem("nebula-theme", name);
@@ -226,16 +449,17 @@
       localStorage.setItem("nebula-bg", name);
     }
 
-    themeButtons.forEach((btn) => btn.addEventListener("click", () => applyTheme(btn.dataset.theme)));
-    bgButtons.forEach((btn) => btn.addEventListener("click", () => applyBackground(btn.dataset.bg)));
+    themeButtons.forEach(btn => btn.addEventListener("click", () => applyTheme(btn.dataset.theme)));
+    bgButtons.forEach(btn => btn.addEventListener("click", () => applyBackground(btn.dataset.bg)));
 
     window.addEventListener("load", () => {
       const savedTheme = localStorage.getItem("nebula-theme");
-      const savedBG = localStorage.getItem("nebula-bg");
+      const savedBG    = localStorage.getItem("nebula-bg");
 
       if (savedTheme) applyTheme(savedTheme);
       if (savedBG) applyBackground(savedBG);
     });
+
   </script>
 
 </body>
