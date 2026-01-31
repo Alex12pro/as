@@ -11,8 +11,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
 
     <style>
-        /* UNCHANGED — EXACTLY your Nebula CSS (preserved 100%) */
-        /* ---------------------------------------------------------------------- */
         :root {
             --bg-primary: #0a0b0e;
             --accent-blue: #00d4ff;
@@ -53,6 +51,7 @@
             padding: 0.875rem 1.5rem;
             display: flex; align-items: center; gap: 1.25rem;
         }
+
         .brand {
             font-family: 'Orbitron', sans-serif;
             font-size: 1.5rem; font-weight: 900;
@@ -60,7 +59,9 @@
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             cursor: pointer;
+            user-select: none;
         }
+
         .nav-btn {
             width: 38px; height: 38px;
             background: rgba(255, 255, 255, 0.04);
@@ -69,10 +70,14 @@
             color: var(--text-secondary);
             cursor: pointer;
             display: flex; align-items: center; justify-content: center;
+            font-size: 18px;
+            user-select: none;
         }
+
         .search-wrapper {
             flex: 1; max-width: 750px; position: relative;
         }
+
         .url-input {
             width: 100%; height: 48px;
             background: rgba(255, 255, 255, 0.04);
@@ -81,15 +86,20 @@
             color: white;
             border: 1px solid transparent;
         }
+
         .url-input:focus {
             background: rgba(255, 255, 255, 0.08);
             border-color: var(--accent-blue);
+            outline: none;
         }
+
         .lock-icon {
             position: absolute;
             left: 1.2rem; top: 50%;
             transform: translateY(-50%);
+            opacity: 0.7;
         }
+
         .go-button {
             position: absolute;
             right: 8px; top: 50%;
@@ -98,72 +108,82 @@
             background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
             border-radius: 10px;
             cursor: pointer;
+            color: white;
+            border: none;
         }
 
         main { flex: 1; position: relative; }
+
         .welcome {
             position: absolute; inset: 0;
             display: flex; flex-direction: column;
             align-items: center; justify-content: center;
+            gap: 1rem;
+            text-align: center;
         }
-        .browser { width: 100%; height: 100%; border: none; display: none; }
+
+        .browser {
+            width: 100%; height: 100%;
+            border: none;
+            display: none;
+        }
+
         .browser.active { display: block; }
+
+        .quick-card {
+            padding: 2rem;
+            background: rgba(255, 255, 255, 0.04);
+            border-radius: 20px;
+            cursor: pointer;
+            transition: 0.15s;
+        }
+        .quick-card:hover { background: rgba(255,255,255,0.08); }
     </style>
 </head>
 <body>
-    <div id="app">
-        <header>
-            <div class="brand" id="homeBtn">NEBULA</div>
+    <header>
+        <div class="brand" id="homeBtn">NEBULA</div>
 
-            <button class="nav-btn" id="backBtn">←</button>
-            <button class="nav-btn" id="forwardBtn">→</button>
-            <button class="nav-btn" id="refreshBtn">↻</button>
+        <button class="nav-btn" id="backBtn">←</button>
+        <button class="nav-btn" id="forwardBtn">→</button>
+        <button class="nav-btn" id="refreshBtn">⟳</button>
 
-            <div class="search-wrapper">
-                <span class="lock-icon">🔒</span>
-                <input id="urlInput" class="url-input" placeholder="Search Brave or enter URL..." />
-                <button id="goBtn" class="go-button">→</button>
-            </div>
-        </header>
+        <div class="search-wrapper">
+            <span class="lock-icon">🔒</span>
+            <input id="urlInput" class="url-input" placeholder="Search Brave or enter URL..." />
+            <button id="goBtn" class="go-button">→</button>
+        </div>
+    </header>
 
-        <main>
-            <div class="welcome" id="welcomeScreen">
-                <div class="hero-logo" style="
-                    font-family:'Orbitron'; 
-                    font-size:6rem;
-                    background:linear-gradient(135deg,#00d4ff,#a855f7,#ec4899);
-                    -webkit-background-clip:text;
-                    -webkit-text-fill-color:transparent;
-                    margin-bottom:1rem;
-                ">NEBULA</div>
-                <p>Created By Alex</p>
-
-                <div class="quick-card" id="quickSearch" style="
-                    margin-top:2rem; 
-                    padding:2rem; 
-                    background:rgba(255,255,255,0.04);
-                    border-radius:20px;
-                    cursor:pointer;
-                ">
-                    <h3>🔍 Search</h3>
-                    <p>Start browsing privately</p>
-                </div>
+    <main>
+        <div class="welcome" id="welcomeScreen">
+            <div style="
+                font-family:'Orbitron',sans-serif;
+                font-size:6rem;
+                background:linear-gradient(135deg,#00d4ff,#a855f7,#ec4899);
+                -webkit-background-clip:text;
+                -webkit-text-fill-color:transparent;
+                margin-bottom:1rem;">
+                NEBULA
             </div>
 
-            <iframe class="browser" id="browserFrame"></iframe>
-        </main>
-    </div>
+            <p>Created By Alex</p>
+
+            <div class="quick-card" id="quickSearch">
+                <h3>🔵 Search</h3>
+                <p>Start browsing privately</p>
+            </div>
+        </div>
+
+        <iframe class="browser" id="browserFrame"></iframe>
+    </main>
 
     <script>
         const urlInput = document.getElementById("urlInput");
         const browserFrame = document.getElementById("browserFrame");
         const welcomeScreen = document.getElementById("welcomeScreen");
 
-        // Detect URL vs Search
         function makeProxyURL(input) {
-            if (!input) return null;
-
-            // URL detection
             const isURL = /^(https?:\/\/)?([\w-]+\.)+[\w-]+/i.test(input);
 
             const target = isURL
@@ -173,19 +193,17 @@
             return "/p?u=" + encodeURIComponent(target);
         }
 
-        // Navigation
         function navigate(input) {
-            const proxyURL = makeProxyURL(input);
-            if (!proxyURL) return;
+            const url = makeProxyURL(input);
+            if (!url) return;
 
             welcomeScreen.style.display = "none";
             browserFrame.classList.add("active");
-            browserFrame.src = proxyURL;
+            browserFrame.src = url;
         }
 
-        // UI Events
         document.getElementById("goBtn").onclick = () => navigate(urlInput.value);
-        urlInput.addEventListener("keydown", (e) => {
+        urlInput.addEventListener("keydown", e => {
             if (e.key === "Enter") navigate(urlInput.value);
         });
 
@@ -193,7 +211,9 @@
 
         document.getElementById("homeBtn").onclick = () => {
             browserFrame.classList.remove("active");
+            browserFrame.src = "about:blank";   // ⭐ important fix
             welcomeScreen.style.display = "flex";
+            urlInput.value = "";
         };
 
         document.getElementById("backBtn").onclick = () => browserFrame.contentWindow.history.back();
