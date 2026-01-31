@@ -1,432 +1,361 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Nebula Proxy - Created By Alex</title>
+<meta charset="UTF-8">
+<title>Nebula 2.0</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
 
-  <!-- Fonts -->
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+<style>
 
-  <style>
-    :root {
-      --bg-primary: #0a0b0e;
-      --accent-blue: #00d4ff;
-      --accent-purple: #a855f7;
-      --accent-pink: #ec4899;
-      --text-primary: #f8fafc;
-      --text-secondary: #94a3b8;
-      --text-muted: #64748b;
-      --border-color: rgba(148, 163, 184, 0.1);
-      --glass-bg: rgba(26, 28, 38, 0.6);
-    }
+/* ============================================================
+   ROOT VARIABLES
+   ============================================================ */
+:root {
+  --accent-blue: #4dd0ff;
+  --accent-purple: #b36bff;
+  --accent-pink: #ff4dc4;
 
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
+  --text-primary: #ffffff;
+  --text-secondary: #c7d2e5;
 
-    html, body {
-      height: 100%;
-      overflow: hidden;
-    }
+  --card-bg: rgba(255,255,255,0.06);
+  --card-border: rgba(255,255,255,0.18);
+}
 
-    body {
-      font-family: "Inter", sans-serif;
-      background: linear-gradient(135deg, #0a0b0e 0%, #13141a 50%, #0a0b0e 100%);
-      color: var(--text-primary);
-      position: relative;
-    }
+/* Reset */
+body, html {
+  margin: 0;
+  padding: 0;
+  font-family: Inter, sans-serif;
+  background: #0a0e17;
+  overflow: hidden;
+}
 
-    body::before {
-      content: "";
-      position: fixed;
-      top: -50%;
-      left: -50%;
-      width: 200%;
-      height: 200%;
-      background:
-        radial-gradient(circle at 30% 40%, rgba(0, 212, 255, 0.08) 0%, transparent 50%),
-        radial-gradient(circle at 70% 60%, rgba(168, 85, 247, 0.08) 0%, transparent 50%);
-      animation: backgroundPulse 20s ease-in-out infinite;
-      pointer-events: none;
-      z-index: 0;
-    }
+body {
+  transition: background 0.6s ease, filter 0.6s ease;
+}
 
-    @keyframes backgroundPulse {
-      0%, 100% { transform: translate(0, 0) scale(1); }
-      50% { transform: translate(-5%, -5%) scale(1.1); }
-    }
+/* ============================================================
+   MAIN BACKGROUND — animated variants
+   ============================================================ */
 
-    body::after {
-      content: "";
-      position: fixed;
-      inset: 0;
-      background-image:
-        radial-gradient(2px 2px at 20% 30%, white, transparent),
-        radial-gradient(2px 2px at 60% 70%, white, transparent),
-        radial-gradient(1px 1px at 50% 50%, white, transparent);
-      background-size: 200% 200%;
-      opacity: 0.4;
-      animation: stars 60s linear infinite;
-      pointer-events: none;
-      z-index: 0;
-    }
+body::before {
+  content: "";
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%;
+  height: 100%;
+  background-size: cover;
+  background-position: center;
+  z-index: -1;
+  opacity: 1;
+  transition: opacity 0.5s ease, filter 0.5s ease;
+}
 
-    @keyframes stars {
-      from { background-position: 0% 0%; }
-      to { background-position: 100% 100%; }
-    }
+/* ---------- 1. Nebula background ---------- */
+@keyframes nebulaMove {
+  0% { transform: translate3d(-10%, -10%, 0) scale(1.25); }
+  50% { transform: translate3d(10%, 10%, 0) scale(1.3); }
+  100% { transform: translate3d(-10%, -10%, 0) scale(1.25); }
+}
+body[data-bg="nebula"]::before {
+  background:
+    radial-gradient(circle at 20% 30%, rgba(0,140,255,0.45), transparent 60%),
+    radial-gradient(circle at 80% 70%, rgba(255,30,200,0.35), transparent 70%),
+    radial-gradient(circle at 50% 50%, rgba(60,0,120,0.5), transparent 80%);
+  filter: blur(40px);
+  animation: nebulaMove 20s infinite alternate ease-in-out;
+}
 
-    #app {
-      position: relative;
-      z-index: 1;
-      height: 100vh;
-      display: flex;
-      flex-direction: column;
-    }
+/* ---------- 2. Galaxy ---------- */
+@keyframes galaxyRotate {
+  from { transform: rotate(0deg) scale(1.1); }
+  to   { transform: rotate(360deg) scale(1.1); }
+}
+body[data-bg="galaxy"]::before {
+  background:
+    repeating-radial-gradient(circle,
+      rgba(255,255,255,0.05) 0px,
+      rgba(255,255,255,0.02) 2px,
+      transparent 3px);
+  animation: galaxyRotate 40s linear infinite;
+}
 
-    header {
-      background: var(--glass-bg);
-      backdrop-filter: blur(24px) saturate(180%);
-      border-bottom: 1px solid var(--border-color);
-      padding: 0.875rem 1.5rem;
-      display: flex;
-      align-items: center;
-      gap: 1.25rem;
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
-      animation: slideDown 0.7s cubic-bezier(0.16, 1, 0.3, 1);
-    }
+/* ---------- 3. Pulse ---------- */
+@keyframes pulseGlow {
+  0% { filter: hue-rotate(0deg) brightness(1); }
+  50% { filter: hue-rotate(100deg) brightness(1.25); }
+  100% { filter: hue-rotate(0deg) brightness(1); }
+}
+body[data-bg="pulse"]::before {
+  background:
+    radial-gradient(circle at 50% 50%, rgba(0,200,255,0.5), transparent 70%),
+    radial-gradient(circle at 80% 20%, rgba(255,0,150,0.5), transparent 80%),
+    radial-gradient(circle at 10% 80%, rgba(150,0,255,0.45), transparent 80%);
+  filter: blur(30px);
+  animation: pulseGlow 9s ease-in-out infinite;
+}
 
-    @keyframes slideDown {
-      from { transform: translateY(-100%); opacity: 0; }
-      to { transform: translateY(0); opacity: 1; }
-    }
+/* ---------- 4. Night ---------- */
+@keyframes nightFloat {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-20px); }
+  100% { transform: translateY(0px); }
+}
+body[data-bg="night"]::before {
+  background: linear-gradient(145deg,#080c14,#02050b);
+  animation: nightFloat 16s ease-in-out infinite;
+}
 
-    .brand {
-      font-family: "Orbitron", sans-serif;
-      font-size: 1.5rem;
-      font-weight: 900;
-      background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple), var(--accent-pink));
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      letter-spacing: 2px;
-      cursor: pointer;
-      user-select: none;
-    }
+/* ---------- 5. Grid Glow ---------- */
+@keyframes gridMove {
+  to { background-position: 200px 200px; }
+}
+body[data-bg="grid"]::before {
+  background:
+    linear-gradient(rgba(0,0,0,0.75), rgba(0,0,0,0.75)),
+    repeating-linear-gradient(0deg,
+      rgba(0,200,255,0.15) 0px,
+      rgba(0,200,255,0.05) 2px,
+      transparent 3px),
+    repeating-linear-gradient(90deg,
+      rgba(0,200,255,0.15) 0px,
+      rgba(0,200,255,0.05) 2px,
+      transparent 3px);
+  animation: gridMove 15s linear infinite;
+}
 
-    .nav-controls {
-      display: flex;
-      gap: 0.5rem;
-    }
+/* ---------- 6. Stars ---------- */
+@keyframes twinkle {
+  0%,100% { opacity: .85; }
+  50% { opacity: 1; }
+}
+body[data-bg="stars"]::before {
+  background:
+    radial-gradient(circle, rgba(255,255,255,0.08) 1px, transparent 1px),
+    radial-gradient(circle, rgba(255,255,255,0.06) 1px, transparent 1px),
+    radial-gradient(circle, rgba(255,255,255,0.04) 1px, transparent 1px);
+  background-size: 3px 3px, 2px 2px, 1px 1px;
+  animation: twinkle 5s infinite ease-in-out;
+}
 
-    .nav-btn {
-      width: 38px;
-      height: 38px;
-      background: rgba(255, 255, 255, 0.04);
-      border: 1px solid var(--border-color);
-      border-radius: 10px;
-      color: var(--text-secondary);
-      font-size: 1.1rem;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: all 0.25s;
-    }
+/* ---------- 7. Waves ---------- */
+@keyframes waveMove {
+  to { background-position: 180% 50%; }
+}
+body[data-bg="waves"]::before {
+  background: linear-gradient(120deg,#003f7d,#0050ff,#7b00ff,#ff00cc);
+  background-size: 300% 300%;
+  animation: waveMove 12s linear infinite;
+}
 
-    .nav-btn:hover {
-      background: rgba(0, 212, 255, 0.1);
-      border-color: var(--accent-blue);
-      color: var(--accent-blue);
-      transform: translateY(-2px);
-    }
+/* ---------- 8. Solid ---------- */
+@keyframes shimmer {
+  0% { filter: brightness(1); }
+  50% { filter: brightness(1.15); }
+  100% { filter: brightness(1); }
+}
+body[data-bg="solid"]::before {
+  background: linear-gradient(140deg,#0e1220,#181c2d);
+  animation: shimmer 10s infinite ease-in-out;
+}
 
-    .search-wrapper {
-      flex: 1;
-      max-width: 750px;
-      position: relative;
-    }
+/* ============================================================
+   NEBULA LOGO + HERO CONTENT
+   ============================================================ */
 
-    .url-input {
-      width: 100%;
-      height: 48px;
-      background: rgba(255, 255, 255, 0.04);
-      border: 2px solid transparent;
-      border-radius: 14px;
-      padding: 0 4rem 0 3.5rem;
-      color: var(--text-primary);
-      font-size: 0.95rem;
-      font-family: "Inter", sans-serif;
-      font-weight: 500;
-      transition: all 0.35s;
-      outline: none;
-    }
+#logo {
+  text-align: center;
+  font-size: 4rem;
+  font-weight: 900;
+  margin-top: 80px;
+  background: linear-gradient(90deg,#4dd0ff,#b36bff);
+  -webkit-background-clip: text;
+  color: transparent;
+  letter-spacing: 2px;
+}
 
-    .url-input:focus {
-      background: rgba(255, 255, 255, 0.06);
-      border-color: var(--accent-blue);
-      box-shadow: 0 0 0 4px rgba(0, 212, 255, 0.12);
-      transform: translateY(-2px);
-    }
+.hero-tagline {
+  text-align: center;
+  color: #dce7ff;
+  font-size: 1.4rem;
+  margin-top: -10px;
+}
 
-    .lock-icon {
-      position: absolute;
-      left: 1.2rem;
-      top: 50%;
-      transform: translateY(-50%);
-      font-size: 1.2rem;
-      color: var(--accent-blue);
-    }
+/* SEARCH BUTTON CARD */
+.quick-card {
+  width: 260px;
+  margin: 40px auto;
+  padding: 22px;
+  background: var(--card-bg);
+  backdrop-filter: blur(25px);
+  border-radius: 18px;
+  border: 1px solid var(--card-border);
+  text-align: center;
+  cursor: pointer;
+  transition: 0.3s;
+}
+.quick-card:hover {
+  transform: scale(1.04);
+  border-color: #4dd0ff;
+}
+.quick-card h3,
+.quick-card p {
+  color: #fff !important;
+  margin: 0;
+  margin-top: 6px;
+  font-weight: 500;
+}
 
-    .go-button {
-      position: absolute;
-      right: 6px;
-      top: 50%;
-      transform: translateY(-50%);
-      width: 36px;
-      height: 36px;
-      background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
-      border: none;
-      border-radius: 10px;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: all 0.3s;
-      color: white;
-      font-size: 1.1rem;
-    }
+/* ============================================================
+   SETTINGS PANEL
+   ============================================================ */
+#settingsBtn {
+  position: fixed;
+  top: 22px;
+  right: 22px;
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.25);
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  cursor: pointer;
+  backdrop-filter: blur(12px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
 
-    .go-button:hover {
-      transform: translateY(-50%) scale(1.08);
-    }
+#settingsPanel {
+  position: fixed;
+  right: -420px;
+  top: 0;
+  width: 420px;
+  height: 100%;
+  background: rgba(10,12,20,0.88);
+  backdrop-filter: blur(20px);
+  border-left: 1px solid rgba(255,255,255,0.15);
+  transition: 0.4s;
+  padding: 40px;
+  color: #fff;
+  overflow-y: auto;
+}
+#settingsPanel.active {
+  right: 0;
+}
 
-    main {
-      flex: 1;
-      position: relative;
-    }
+.settings-title {
+  font-size: 1.6rem;
+  margin-bottom: 20px;
+  color: #fff;
+}
 
-    .welcome {
-      position: absolute;
-      inset: 0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 2rem;
-    }
+.settings-subtitle {
+  margin-top: 28px;
+  font-size: 1.1rem;
+  margin-bottom: 14px;
+  color: #e8efff !important;
+}
 
-    .hero-logo {
-      font-family: "Orbitron", sans-serif;
-      font-size: 5rem;
-      font-weight: 900;
-      letter-spacing: 0.25em;
-      text-indent: 0.25em;
-      background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple), var(--accent-pink));
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      animation: heroGlow 2.4s ease-in-out infinite;
-      margin-bottom: 1rem;
-    }
+/* setting buttons */
+.settings-btn {
+  width: 48%;
+  padding: 14px;
+  margin: 6px 1%;
+  border-radius: 14px;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.18);
+  text-align: center;
+  cursor: pointer;
+  color: #e8efff !important;
+  transition: 0.3s;
+}
+.settings-btn:hover {
+  background: rgba(255,255,255,0.14);
+  border-color: var(--accent-blue);
+  color: #fff !important;
+}
 
-    @keyframes heroGlow {
-      0%, 100% { filter: drop-shadow(0 0 40px rgba(0, 212, 255, 0.4)); }
-      50% { filter: drop-shadow(0 0 60px rgba(0, 212, 255, 0.7)); }
-    }
-
-    .hero-tagline {
-      font-size: 1.4rem;
-      color: var(--text-secondary);
-      font-weight: 300;
-      margin-bottom: 4rem;
-      text-align: center;
-    }
-
-    .quick-card {
-      background: var(--glass-bg);
-      backdrop-filter: blur(20px);
-      border: 1px solid var(--border-color);
-      border-radius: 20px;
-      padding: 3rem;
-      text-align: center;
-      max-width: 500px;
-      cursor: pointer;
-      transition: all 0.4s;
-    }
-
-    .quick-card:hover {
-      transform: translateY(-12px);
-      border-color: var(--accent-blue);
-      box-shadow: 0 20px 60px rgba(0, 212, 255, 0.3);
-    }
-
-    .card-icon {
-      font-size: 4rem;
-      margin-bottom: 1.5rem;
-    }
-
-    .card-title {
-      font-size: 1.5rem;
-      font-weight: 700;
-      margin-bottom: 0.75rem;
-    }
-
-    .browser {
-      width: 100%;
-      height: 100%;
-      border: none;
-      background: white;
-      display: none;
-    }
-
-    .browser.active {
-      display: block;
-    }
-
-    @media (max-width: 768px) {
-      header { flex-wrap: wrap; }
-      .search-wrapper { order: 3; width: 100%; margin-top: 0.5rem; }
-      .hero-logo { font-size: 3.5rem; }
-    }
-  </style>
+</style>
 </head>
-<body>
-  <div id="app">
-    <header>
-      <div class="brand" id="brandBtn">NEBULA</div>
+<body data-bg="nebula">
 
-      <nav class="nav-controls">
-        <button class="nav-btn" id="backBtn">←</button>
-        <button class="nav-btn" id="forwardBtn">→</button>
-        <button class="nav-btn" id="refreshBtn">↻</button>
-        <button class="nav-btn" id="homeBtn">⌂</button>
-      </nav>
+<!-- SETTINGS BUTTON -->
+<div id="settingsBtn">⚙️</div>
 
-      <div class="search-wrapper">
-        <span class="lock-icon">🔒</span>
-        <input
-          type="text"
-          class="url-input"
-          id="urlInput"
-          placeholder="Search Brave or enter URL..."
-        />
-        <button class="go-button" id="goBtn">→</button>
-      </div>
-    </header>
+<!-- SETTINGS PANEL -->
+<div id="settingsPanel">
+  <div class="settings-title">Settings</div>
 
-    <main>
-      <div class="welcome" id="welcomeScreen">
-        <div class="hero-logo">NEBULA</div>
-        <p class="hero-tagline">Created By Alex</p>
+  <div class="settings-subtitle">Theme Background</div>
 
-        <div class="quick-card">
-          <span class="card-icon">🔍</span>
-          <h3 class="card-title">Search</h3>
-          <p>Start browsing privately with Brave</p>
-        </div>
-      </div>
+  <div class="settings-btn" data-bg="nebula">Nebula</div>
+  <div class="settings-btn" data-bg="galaxy">Galaxy</div>
+  <div class="settings-btn" data-bg="pulse">Pulse</div>
+  <div class="settings-btn" data-bg="night">Night</div>
+  <div class="settings-btn" data-bg="grid">Grid Glow</div>
+  <div class="settings-btn" data-bg="stars">Stars</div>
+  <div class="settings-btn" data-bg="waves">Waves</div>
+  <div class="settings-btn" data-bg="solid">Solid</div>
 
-      <iframe class="browser" id="browserFrame"></iframe>
-    </main>
-  </div>
+</div>
 
-  <!-- NAVIGATION + PROXY SCRIPT -->
-  <script type="module">
-    const urlInput = document.getElementById("urlInput");
-    const browserFrame = document.getElementById("browserFrame");
-    const welcomeScreen = document.getElementById("welcomeScreen");
-    const goBtn = document.getElementById("goBtn");
-    const backBtn = document.getElementById("backBtn");
-    const forwardBtn = document.getElementById("forwardBtn");
-    const refreshBtn = document.getElementById("refreshBtn");
-    const homeBtn = document.getElementById("homeBtn");
-    const brandBtn = document.getElementById("brandBtn");
-    const quickCard = document.querySelector(".quick-card");
+<!-- MAIN LOGO + SEARCH -->
+<div id="logo">NEBULA</div>
+<div class="hero-tagline">Created By Alex</div>
 
-    function isURL(text) {
-      return /^(https?:\/\/)?([\w-]+\.)+[\w-]+/i.test(text);
-    }
+<div class="quick-card" onclick="openSearch()">
+  <h3>🔍 Search</h3>
+  <p>Start browsing</p>
+</div>
 
-    function buildProxyURL(input) {
-      if (!input) return null;
+<script>
 
-      let target;
-      if (isURL(input)) {
-        target = input.startsWith("http") ? input : "https://" + input;
-      } else {
-        target =
-          "https://search.brave.com/search?q=" +
-          encodeURIComponent(input);
-      }
+/* ============================================================
+   SETTINGS PANEL TOGGLE
+   ============================================================ */
+const settingsBtn = document.getElementById("settingsBtn");
+const settingsPanel = document.getElementById("settingsPanel");
 
-      return "/p?u=" + encodeURIComponent(target);
-    }
+settingsBtn.onclick = () => {
+  settingsPanel.classList.toggle("active");
+};
 
-    function showIframe(url) {
-      welcomeScreen.style.display = "none";
-      browserFrame.classList.add("active");
-      browserFrame.style.display = "block";
-      browserFrame.src = url;
-    }
+/* ============================================================
+   APPLY SAVED THEME
+   ============================================================ */
+const savedBG = localStorage.getItem("nebula-bg");
+if (savedBG) document.body.setAttribute("data-bg", savedBG);
 
-    function navigate(input) {
-      const proxyURL = buildProxyURL(input);
-      if (!proxyURL) return;
-      showIframe(proxyURL);
-    }
+/* ============================================================
+   BACKGROUND BUTTONS
+   ============================================================ */
+document.querySelectorAll(".settings-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    const bg = btn.getAttribute("data-bg");
+    document.body.setAttribute("data-bg", bg);
+    localStorage.setItem("nebula-bg", bg);
+  });
+});
 
-    function goHome() {
-      // Hide & clear iframe
-      browserFrame.classList.remove("active");
-      browserFrame.style.display = "none";
-      browserFrame.src = "about:blank";
+/* ============================================================
+   SEARCH HANDLER — BRAVE SEARCH
+   ============================================================ */
+function openSearch() {
+  let q = prompt("Search Brave or enter a URL:");
+  if (!q) return;
 
-      // Show hero
-      welcomeScreen.style.display = "flex";
+  let target;
+  if (q.includes(".")) {
+    target = `https://${q}`;
+  } else {
+    target = `https://search.brave.com/search?q=${encodeURIComponent(q)}`;
+  }
 
-      // Clear bar
-      urlInput.value = "";
+  window.location.href = `/p?u=${encodeURIComponent(target)}`;
+}
 
-      window.scrollTo(0, 0);
-    }
+</script>
 
-    if (goBtn && urlInput) {
-      goBtn.addEventListener("click", () => navigate(urlInput.value));
-      urlInput.addEventListener("keydown", (e) => {
-        if (e.key === "Enter") navigate(urlInput.value);
-      });
-    }
-
-    if (backBtn) {
-      backBtn.addEventListener("click", () => {
-        try { browserFrame.contentWindow.history.back(); } catch {}
-      });
-    }
-
-    if (forwardBtn) {
-      forwardBtn.addEventListener("click", () => {
-        try { browserFrame.contentWindow.history.forward(); } catch {}
-      });
-    }
-
-    if (refreshBtn) {
-      refreshBtn.addEventListener("click", () => {
-        try { browserFrame.contentWindow.location.reload(); } catch {}
-      });
-    }
-
-    if (homeBtn) homeBtn.addEventListener("click", goHome);
-    if (brandBtn) brandBtn.addEventListener("click", goHome);
-
-    if (quickCard) {
-      quickCard.addEventListener("click", () => {
-        navigate("brave");
-      });
-    }
-  </script>
 </body>
 </html>
