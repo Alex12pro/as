@@ -1,97 +1,432 @@
-<script type="module">
-  // ===== Elements =====
-  const urlInput = document.getElementById("urlInput");
-  const browserFrame = document.getElementById("browserFrame");
-  const welcomeScreen = document.getElementById("welcomeScreen");
-  const goBtn = document.getElementById("goBtn");
-  const backBtn = document.getElementById("backBtn");
-  const forwardBtn = document.getElementById("forwardBtn");
-  const refreshBtn = document.getElementById("refreshBtn");
-  const homeBtn = document.getElementById("homeBtn");
-  const quickCard = document.querySelector(".quick-card");
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Nebula Proxy - Created By Alex</title>
 
-  // ===== Helpers =====
-  function isURL(text) {
-    return /^(https?:\/\/)?([\w-]+\.)+[\w-]+/i.test(text);
-  }
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
 
-  function buildProxyURL(input) {
-    if (!input) return null;
-
-    let target;
-    if (isURL(input)) {
-      target = input.startsWith("http") ? input : "https://" + input;
-    } else {
-      // Brave search
-      target = "https://search.brave.com/search?q=" + encodeURIComponent(input);
+  <style>
+    :root {
+      --bg-primary: #0a0b0e;
+      --accent-blue: #00d4ff;
+      --accent-purple: #a855f7;
+      --accent-pink: #ec4899;
+      --text-primary: #f8fafc;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+      --border-color: rgba(148, 163, 184, 0.1);
+      --glass-bg: rgba(26, 28, 38, 0.6);
     }
 
-    return "/p?u=" + encodeURIComponent(target);
-  }
-
-  // ===== Navigation =====
-  function navigate(input) {
-    const proxyURL = buildProxyURL(input);
-    if (!proxyURL) return;
-
-    // Hide home UI
-    welcomeScreen.style.display = "none";
-
-    // Show iframe
-    browserFrame.classList.add("active");
-    browserFrame.style.display = "block";
-    browserFrame.src = proxyURL;
-  }
-
-  function goHome() {
-    // Hide iframe completely
-    browserFrame.classList.remove("active");
-    browserFrame.style.display = "none";
-    browserFrame.src = "about:blank";
-
-    // Show home UI exactly as designed
-    welcomeScreen.style.display = "flex";
-
-    // Reset input
-    urlInput.value = "";
-
-    // Safety scroll reset
-    window.scrollTo(0, 0);
-  }
-
-  // ===== Top Bar =====
-  goBtn.addEventListener("click", () => navigate(urlInput.value));
-
-  urlInput.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") {
-      navigate(urlInput.value);
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
     }
-  });
 
-  backBtn.addEventListener("click", () => {
-    try {
-      browserFrame.contentWindow.history.back();
-    } catch {}
-  });
+    html, body {
+      height: 100%;
+      overflow: hidden;
+    }
 
-  forwardBtn.addEventListener("click", () => {
-    try {
-      browserFrame.contentWindow.history.forward();
-    } catch {}
-  });
+    body {
+      font-family: "Inter", sans-serif;
+      background: linear-gradient(135deg, #0a0b0e 0%, #13141a 50%, #0a0b0e 100%);
+      color: var(--text-primary);
+      position: relative;
+    }
 
-  refreshBtn.addEventListener("click", () => {
-    try {
-      browserFrame.contentWindow.location.reload();
-    } catch {}
-  });
+    body::before {
+      content: "";
+      position: fixed;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background:
+        radial-gradient(circle at 30% 40%, rgba(0, 212, 255, 0.08) 0%, transparent 50%),
+        radial-gradient(circle at 70% 60%, rgba(168, 85, 247, 0.08) 0%, transparent 50%);
+      animation: backgroundPulse 20s ease-in-out infinite;
+      pointer-events: none;
+      z-index: 0;
+    }
 
-  homeBtn.addEventListener("click", goHome);
+    @keyframes backgroundPulse {
+      0%, 100% { transform: translate(0, 0) scale(1); }
+      50% { transform: translate(-5%, -5%) scale(1.1); }
+    }
 
-  // ===== Home Quick Card =====
-  if (quickCard) {
-    quickCard.addEventListener("click", () => {
-      navigate("brave");
-    });
-  }
-</script>
+    body::after {
+      content: "";
+      position: fixed;
+      inset: 0;
+      background-image:
+        radial-gradient(2px 2px at 20% 30%, white, transparent),
+        radial-gradient(2px 2px at 60% 70%, white, transparent),
+        radial-gradient(1px 1px at 50% 50%, white, transparent);
+      background-size: 200% 200%;
+      opacity: 0.4;
+      animation: stars 60s linear infinite;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    @keyframes stars {
+      from { background-position: 0% 0%; }
+      to { background-position: 100% 100%; }
+    }
+
+    #app {
+      position: relative;
+      z-index: 1;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      background: var(--glass-bg);
+      backdrop-filter: blur(24px) saturate(180%);
+      border-bottom: 1px solid var(--border-color);
+      padding: 0.875rem 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 1.25rem;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+      animation: slideDown 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    @keyframes slideDown {
+      from { transform: translateY(-100%); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    .brand {
+      font-family: "Orbitron", sans-serif;
+      font-size: 1.5rem;
+      font-weight: 900;
+      background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple), var(--accent-pink));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      letter-spacing: 2px;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .nav-controls {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .nav-btn {
+      width: 38px;
+      height: 38px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      color: var(--text-secondary);
+      font-size: 1.1rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.25s;
+    }
+
+    .nav-btn:hover {
+      background: rgba(0, 212, 255, 0.1);
+      border-color: var(--accent-blue);
+      color: var(--accent-blue);
+      transform: translateY(-2px);
+    }
+
+    .search-wrapper {
+      flex: 1;
+      max-width: 750px;
+      position: relative;
+    }
+
+    .url-input {
+      width: 100%;
+      height: 48px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 2px solid transparent;
+      border-radius: 14px;
+      padding: 0 4rem 0 3.5rem;
+      color: var(--text-primary);
+      font-size: 0.95rem;
+      font-family: "Inter", sans-serif;
+      font-weight: 500;
+      transition: all 0.35s;
+      outline: none;
+    }
+
+    .url-input:focus {
+      background: rgba(255, 255, 255, 0.06);
+      border-color: var(--accent-blue);
+      box-shadow: 0 0 0 4px rgba(0, 212, 255, 0.12);
+      transform: translateY(-2px);
+    }
+
+    .lock-icon {
+      position: absolute;
+      left: 1.2rem;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 1.2rem;
+      color: var(--accent-blue);
+    }
+
+    .go-button {
+      position: absolute;
+      right: 6px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 36px;
+      height: 36px;
+      background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.3s;
+      color: white;
+      font-size: 1.1rem;
+    }
+
+    .go-button:hover {
+      transform: translateY(-50%) scale(1.08);
+    }
+
+    main {
+      flex: 1;
+      position: relative;
+    }
+
+    .welcome {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+    }
+
+    .hero-logo {
+      font-family: "Orbitron", sans-serif;
+      font-size: 5rem;
+      font-weight: 900;
+      letter-spacing: 0.25em;
+      text-indent: 0.25em;
+      background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple), var(--accent-pink));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      animation: heroGlow 2.4s ease-in-out infinite;
+      margin-bottom: 1rem;
+    }
+
+    @keyframes heroGlow {
+      0%, 100% { filter: drop-shadow(0 0 40px rgba(0, 212, 255, 0.4)); }
+      50% { filter: drop-shadow(0 0 60px rgba(0, 212, 255, 0.7)); }
+    }
+
+    .hero-tagline {
+      font-size: 1.4rem;
+      color: var(--text-secondary);
+      font-weight: 300;
+      margin-bottom: 4rem;
+      text-align: center;
+    }
+
+    .quick-card {
+      background: var(--glass-bg);
+      backdrop-filter: blur(20px);
+      border: 1px solid var(--border-color);
+      border-radius: 20px;
+      padding: 3rem;
+      text-align: center;
+      max-width: 500px;
+      cursor: pointer;
+      transition: all 0.4s;
+    }
+
+    .quick-card:hover {
+      transform: translateY(-12px);
+      border-color: var(--accent-blue);
+      box-shadow: 0 20px 60px rgba(0, 212, 255, 0.3);
+    }
+
+    .card-icon {
+      font-size: 4rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .card-title {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin-bottom: 0.75rem;
+    }
+
+    .browser {
+      width: 100%;
+      height: 100%;
+      border: none;
+      background: white;
+      display: none;
+    }
+
+    .browser.active {
+      display: block;
+    }
+
+    @media (max-width: 768px) {
+      header { flex-wrap: wrap; }
+      .search-wrapper { order: 3; width: 100%; margin-top: 0.5rem; }
+      .hero-logo { font-size: 3.5rem; }
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <header>
+      <div class="brand" id="brandBtn">NEBULA</div>
+
+      <nav class="nav-controls">
+        <button class="nav-btn" id="backBtn">←</button>
+        <button class="nav-btn" id="forwardBtn">→</button>
+        <button class="nav-btn" id="refreshBtn">↻</button>
+        <button class="nav-btn" id="homeBtn">⌂</button>
+      </nav>
+
+      <div class="search-wrapper">
+        <span class="lock-icon">🔒</span>
+        <input
+          type="text"
+          class="url-input"
+          id="urlInput"
+          placeholder="Search Brave or enter URL..."
+        />
+        <button class="go-button" id="goBtn">→</button>
+      </div>
+    </header>
+
+    <main>
+      <div class="welcome" id="welcomeScreen">
+        <div class="hero-logo">NEBULA</div>
+        <p class="hero-tagline">Created By Alex</p>
+
+        <div class="quick-card">
+          <span class="card-icon">🔍</span>
+          <h3 class="card-title">Search</h3>
+          <p>Start browsing privately with Brave</p>
+        </div>
+      </div>
+
+      <iframe class="browser" id="browserFrame"></iframe>
+    </main>
+  </div>
+
+  <!-- NAVIGATION + PROXY SCRIPT -->
+  <script type="module">
+    const urlInput = document.getElementById("urlInput");
+    const browserFrame = document.getElementById("browserFrame");
+    const welcomeScreen = document.getElementById("welcomeScreen");
+    const goBtn = document.getElementById("goBtn");
+    const backBtn = document.getElementById("backBtn");
+    const forwardBtn = document.getElementById("forwardBtn");
+    const refreshBtn = document.getElementById("refreshBtn");
+    const homeBtn = document.getElementById("homeBtn");
+    const brandBtn = document.getElementById("brandBtn");
+    const quickCard = document.querySelector(".quick-card");
+
+    function isURL(text) {
+      return /^(https?:\/\/)?([\w-]+\.)+[\w-]+/i.test(text);
+    }
+
+    function buildProxyURL(input) {
+      if (!input) return null;
+
+      let target;
+      if (isURL(input)) {
+        target = input.startsWith("http") ? input : "https://" + input;
+      } else {
+        target =
+          "https://search.brave.com/search?q=" +
+          encodeURIComponent(input);
+      }
+
+      return "/p?u=" + encodeURIComponent(target);
+    }
+
+    function showIframe(url) {
+      welcomeScreen.style.display = "none";
+      browserFrame.classList.add("active");
+      browserFrame.style.display = "block";
+      browserFrame.src = url;
+    }
+
+    function navigate(input) {
+      const proxyURL = buildProxyURL(input);
+      if (!proxyURL) return;
+      showIframe(proxyURL);
+    }
+
+    function goHome() {
+      // Hide & clear iframe
+      browserFrame.classList.remove("active");
+      browserFrame.style.display = "none";
+      browserFrame.src = "about:blank";
+
+      // Show hero
+      welcomeScreen.style.display = "flex";
+
+      // Clear bar
+      urlInput.value = "";
+
+      window.scrollTo(0, 0);
+    }
+
+    if (goBtn && urlInput) {
+      goBtn.addEventListener("click", () => navigate(urlInput.value));
+      urlInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") navigate(urlInput.value);
+      });
+    }
+
+    if (backBtn) {
+      backBtn.addEventListener("click", () => {
+        try { browserFrame.contentWindow.history.back(); } catch {}
+      });
+    }
+
+    if (forwardBtn) {
+      forwardBtn.addEventListener("click", () => {
+        try { browserFrame.contentWindow.history.forward(); } catch {}
+      });
+    }
+
+    if (refreshBtn) {
+      refreshBtn.addEventListener("click", () => {
+        try { browserFrame.contentWindow.location.reload(); } catch {}
+      });
+    }
+
+    if (homeBtn) homeBtn.addEventListener("click", goHome);
+    if (brandBtn) brandBtn.addEventListener("click", goHome);
+
+    if (quickCard) {
+      quickCard.addEventListener("click", () => {
+        navigate("brave");
+      });
+    }
+  </script>
+</body>
+</html>
