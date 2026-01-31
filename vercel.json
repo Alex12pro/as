@@ -1,12 +1,16 @@
 {
-  "routes": [
+  "rewrites": [
     {
-      "src": "^/p(.*)",
-      "dest": "/api/proxy.js"
+      "source": "/p",
+      "destination": "/api/proxy"
     },
     {
-      "src": "/",
-      "dest": "/index.html"
+      "source": "/p/(.*)",
+      "destination": "/api/proxy"
+    },
+    {
+      "source": "/",
+      "destination": "/index.html"
     }
   ]
 }
